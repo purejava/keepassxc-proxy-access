@@ -1,7 +1,8 @@
 *.class
 
 # Package Files #
-*.jar
+# jar files exclusion needs to be ommitted to use the local repo in a GitHub action
+#*.jar
 *.war
 *.ear
 

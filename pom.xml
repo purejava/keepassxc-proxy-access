@@ -54,6 +54,14 @@
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 
+  <!-- local repo for tweetnacl-java -->
+  <repositories>
+    <repository>
+      <id>local-repo</id>
+      <url>file://${basedir}/etc/repo</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <dependency>
       <groupId>com.iwebpp.crypto</groupId>
