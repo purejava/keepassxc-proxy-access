@@ -145,7 +145,7 @@ public class Connection implements AutoCloseable {
             return System.getenv("XDG_RUNTIME_DIR");
         }
         if (SystemUtils.IS_OS_MAC_OSX) {
-            return System.getenv("TEMPDIR");
+            return System.getenv("TMPDIR");
         }
         if (SystemUtils.IS_OS_WINDOWS) {
             return "/tmp";
