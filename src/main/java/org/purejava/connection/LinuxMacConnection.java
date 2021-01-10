@@ -1,9 +1,10 @@
-package org.purejava;
+package org.purejava.connection;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONObject;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
+import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

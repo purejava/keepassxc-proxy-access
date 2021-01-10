@@ -1,7 +1,8 @@
-package org.purejava;
+package org.purejava.connection;
 
 import com.iwebpp.crypto.TweetNaclFast;
 import org.json.JSONObject;
+import org.purejava.KeepassProxyAccessException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

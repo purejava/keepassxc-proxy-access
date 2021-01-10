@@ -1,6 +1,7 @@
-package org.purejava;
+package org.purejava.connection;
 
 import org.json.JSONObject;
+import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

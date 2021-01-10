@@ -1,6 +1,9 @@
 package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.purejava.connection.Connection;
+import org.purejava.connection.LinuxMacConnection;
+import org.purejava.connection.WindowsConnection;
 
 import java.io.IOException;
 
