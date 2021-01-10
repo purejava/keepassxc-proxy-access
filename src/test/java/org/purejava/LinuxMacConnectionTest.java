@@ -7,7 +7,7 @@ import org.junit.jupiter.api.*;
 /**
  * Unit test for simple App.
  */
-public class ConnectionTest
+public class LinuxMacConnectionTest
 {
     /**
      * Rigorous Test :-)
