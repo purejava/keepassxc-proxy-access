@@ -7,10 +7,7 @@ import org.purejava.KeepassProxyAccessException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Establishes a connection to KeePassXC via its build-in proxy.
@@ -58,6 +55,49 @@ public abstract class Connection implements AutoCloseable {
     protected abstract JSONObject getCleartextResponse() throws IOException;
 
     /**
+     * Send an encrypted message to the proxy.
+     * The proxy accepts messages in the JSON data format.
+     *
+     * @param msg The message to be sent. The key "action" describes the request to the proxy.
+     * @throws IOException Sending failed due to technical reasons.
+     */
+    public void sendEncryptedMessage(Map<String, String> msg) throws IOException {
+        String strMsg = jsonTxt(msg);
+        String encrypted = Base64.getEncoder().encodeToString(box.box(strMsg.getBytes(), nonce.getBytes()));
+        map = new HashMap<>();
+        map.put("action", msg.get("action"));
+        map.put("message", encrypted);
+        map.put("nonce", nonce);
+        map.put("clientID", clientID);
+        sendCleartextMessage(jsonTxt(map));
+        incrementNonce();
+    }
+
+    /**
+     * Receive an encrypted message from the proxy.
+     * The proxy sends messages in the JSON data format.
+     *
+     * @return The received message.
+     * @throws IOException Retrieving failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to process the requested action.
+     */
+    public JSONObject getEncryptedResponse() throws IOException, KeepassProxyAccessException {
+        JSONObject response = getCleartextResponse();
+        if (response.has("error")) {
+            throw new KeepassProxyAccessException("Error on receiving response");
+        }
+        byte[] serverNonce = Base64.getDecoder().decode(response.getString("nonce"));
+        String decrypted = Arrays.toString(box.open(
+                Base64.getDecoder().decode(response.getString("message")),
+                serverNonce));
+        JSONObject decryptedResponse = new JSONObject(decrypted);
+        if (!decryptedResponse.has("success")) {
+            throw new KeepassProxyAccessException("Processing of action failed");
+        }
+        return decryptedResponse;
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.
@@ -91,7 +131,13 @@ public abstract class Connection implements AutoCloseable {
         // Store box for further communication
         box = new TweetNaclFast.Box(response.getString("publicKey").getBytes(StandardCharsets.UTF_8), keyPair.getSecretKey());
 
-        // Increment nonce by 1
+        incrementNonce();
+    }
+
+    /**
+     * Increment nonce by 1
+     */
+    protected void incrementNonce() {
         int newNonce = ByteBuffer.wrap(nonce.getBytes()).getInt() + 1;
         ByteBuffer dbuf = ByteBuffer.allocate(24).putInt(newNonce);
         nonce = Base64.getEncoder().encodeToString(dbuf.array());

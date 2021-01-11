@@ -53,13 +53,13 @@ public class LinuxMacConnection extends Connection {
     }
 
     @Override
-    public void sendCleartextMessage(String msg) throws IOException {
+    protected void sendCleartextMessage(String msg) throws IOException {
         os.write(msg.getBytes(StandardCharsets.UTF_8));
         os.flush();
     }
 
     @Override
-    public JSONObject getCleartextResponse() throws IOException {
+    protected JSONObject getCleartextResponse() throws IOException {
         byte[] buf = new byte[4096];
         int read = is.read(buf);
         return new JSONObject(new String(buf, 0, read, StandardCharsets.UTF_8));

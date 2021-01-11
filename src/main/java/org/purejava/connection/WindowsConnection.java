@@ -35,12 +35,12 @@ public class WindowsConnection extends Connection {
     }
 
     @Override
-    public void sendCleartextMessage(String msg) throws IOException {
+    protected void sendCleartextMessage(String msg) throws IOException {
         pipe.write(msg.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
-    public JSONObject getCleartextResponse() throws IOException {
+    protected JSONObject getCleartextResponse() throws IOException {
         byte[] buf = new byte[4096];
         int read = pipe.read(buf);
         return new JSONObject(new String(buf, 0, read, StandardCharsets.UTF_8));
