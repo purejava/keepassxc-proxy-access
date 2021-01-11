@@ -15,18 +15,18 @@ import java.util.*;
  */
 public abstract class Connection implements AutoCloseable {
 
-    protected TweetNaclFast.Box box;
-    protected TweetNaclFast.Box.KeyPair keyPair;
-    protected byte[] random24;
-    protected String clientID;
-    protected Map<String, String> map;
-    protected String nonce;
-    protected String pubicKeyB64;
+    private TweetNaclFast.Box box;
+    private TweetNaclFast.Box.KeyPair keyPair;
+    private TweetNaclFast.Box.KeyPair idKeyPair;
+    private byte[] random24;
+    private String clientID;
+    private Map<String, String> map;
+    private String nonce;
+    private String associate_id;
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
 
     public Connection() {
         keyPair = TweetNaclFast.Box.keyPair();
-        pubicKeyB64 = Base64.getEncoder().encodeToString(keyPair.getPublicKey());
         random24 = TweetNaclFast.randombytes(24);
         byte[] array = new byte[24];
         new Random().nextBytes(array);
@@ -61,7 +61,7 @@ public abstract class Connection implements AutoCloseable {
      * @param msg The message to be sent. The key "action" describes the request to the proxy.
      * @throws IOException Sending failed due to technical reasons.
      */
-    public void sendEncryptedMessage(Map<String, String> msg) throws IOException {
+    private void sendEncryptedMessage(Map<String, String> msg) throws IOException {
         String strMsg = jsonTxt(msg);
         String encrypted = Base64.getEncoder().encodeToString(box.box(strMsg.getBytes(), nonce.getBytes()));
         map = new HashMap<>();
@@ -81,7 +81,7 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException Retrieving failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
-    public JSONObject getEncryptedResponse() throws IOException, KeepassProxyAccessException {
+    private JSONObject getEncryptedResponse() throws IOException, KeepassProxyAccessException {
         JSONObject response = getCleartextResponse();
         if (response.has("error")) {
             throw new KeepassProxyAccessException("Error on receiving response");
@@ -98,16 +98,6 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Get a String representation of the JSON object.
-     *
-     * @param keysValues The keys/values defining the JSON object.
-     * @return String representation of the JSON object.
-     */
-    protected String jsonTxt(Map<String, String> keysValues) {
-        return new JSONObject(keysValues).toString();
-    }
-
-    /**
      * This initially exchanges public keys between KeepassXC and this application
      *
      * @throws IOException Connection to the proxy failed due to technical reasons.
@@ -117,7 +107,7 @@ public abstract class Connection implements AutoCloseable {
         // Send change-public-keys request
         map = new HashMap<>();
         map.put("action", "change-public-keys");
-        map.put("publicKey", pubicKeyB64);
+        map.put("publicKey", encodePublicKey(keyPair));
         map.put("nonce", nonce);
         map.put("clientID", clientID);
 
@@ -134,13 +124,47 @@ public abstract class Connection implements AutoCloseable {
         incrementNonce();
     }
 
+    public void associate() throws IOException, KeepassProxyAccessException {
+        idKeyPair = TweetNaclFast.Box.keyPair();
+        // Send associate request
+        map = new HashMap<>();
+        map.put("action", "associate");
+        map.put("key", encodePublicKey(keyPair));
+        map.put("idKey", encodePublicKey(idKeyPair));
+
+        sendEncryptedMessage(map);
+        JSONObject response = getEncryptedResponse();
+
+        associate_id = response.getString("id");
+    }
+
+    /**
+     * Get a String representation of the JSON object.
+     *
+     * @param keysValues The keys/values defining the JSON object.
+     * @return String representation of the JSON object.
+     */
+    private String jsonTxt(Map<String, String> keysValues) {
+        return new JSONObject(keysValues).toString();
+    }
+
     /**
      * Increment nonce by 1
      */
-    protected void incrementNonce() {
+    private void incrementNonce() {
         int newNonce = ByteBuffer.wrap(nonce.getBytes()).getInt() + 1;
         ByteBuffer dbuf = ByteBuffer.allocate(24).putInt(newNonce);
         nonce = Base64.getEncoder().encodeToString(dbuf.array());
+    }
+
+    /**
+     * Base64 encode public key.
+     *
+     * @param key The secret and public key to retrieve the public key from.
+     * @return Base64 encoded public key.
+     */
+    private String encodePublicKey(TweetNaclFast.Box.KeyPair key) {
+        return Base64.getEncoder().encodeToString(key.getPublicKey());
     }
 
     @Override
