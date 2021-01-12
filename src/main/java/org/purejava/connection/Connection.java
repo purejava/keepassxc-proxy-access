@@ -84,7 +84,7 @@ public abstract class Connection implements AutoCloseable {
     private JSONObject getEncryptedResponse() throws IOException, KeepassProxyAccessException {
         JSONObject response = getCleartextResponse();
         if (response.has("error")) {
-            throw new KeepassProxyAccessException("Error on receiving response");
+            throw new KeepassProxyAccessException(response.getString("error"));
         }
         byte[] serverNonce = Base64.getDecoder().decode(response.getString("nonce"));
         String decrypted = Arrays.toString(box.open(
@@ -92,7 +92,7 @@ public abstract class Connection implements AutoCloseable {
                 serverNonce));
         JSONObject decryptedResponse = new JSONObject(decrypted);
         if (!decryptedResponse.has("success")) {
-            throw new KeepassProxyAccessException("Processing of action failed");
+            throw new KeepassProxyAccessException(response.getString("error"));
         }
         return decryptedResponse;
     }
@@ -115,7 +115,7 @@ public abstract class Connection implements AutoCloseable {
         JSONObject response = getCleartextResponse();
 
         if (!response.has("success")) {
-            throw new KeepassProxyAccessException("Unable to exchange new public keys");
+            throw new KeepassProxyAccessException(response.getString("error"));
         }
 
         // Store box for further communication
