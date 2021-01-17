@@ -151,6 +151,24 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
+     *
+     * @return The database hash of the current active KeePassXC database.
+     * @throws IOException Retrieving the hash failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to get the hash.
+     */
+    public String getDatabasehash() throws IOException, KeepassProxyAccessException {
+        // Send get-databasehash request
+        map = new HashMap<>();
+        map.put("action", "get-databasehash");
+
+        sendEncryptedMessage(map);
+        JSONObject response = getEncryptedResponse();
+
+        return response.getString("hash");
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.
