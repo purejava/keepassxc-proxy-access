@@ -103,7 +103,7 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * This initially exchanges public keys between KeepassXC and this application
+     * This initially exchanges public keys between KeepassXC and this application.
      *
      * @throws IOException Connection to the proxy failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
@@ -129,6 +129,12 @@ public abstract class Connection implements AutoCloseable {
 
     }
 
+    /**
+     * Connects KeePassXC with this application.
+     *
+     * @throws IOException Connecting KeePassXC with this application failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to associate KeePassXC with this application.
+     */
     public void associate() throws IOException, KeepassProxyAccessException {
         idKeyPair = TweetNaclFast.Box.keyPair();
 
