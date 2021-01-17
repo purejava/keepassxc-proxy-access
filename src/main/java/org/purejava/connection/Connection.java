@@ -18,20 +18,18 @@ public abstract class Connection implements AutoCloseable {
     private TweetNaclFast.Box box;
     private TweetNaclFast.Box.KeyPair keyPair;
     private TweetNaclFast.Box.KeyPair idKeyPair;
-    private byte[] random24;
     private String clientID;
     private Map<String, String> map;
-    private String nonce;
+    private byte[] nonce;
     private String associate_id;
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
 
     public Connection() {
         keyPair = TweetNaclFast.Box.keyPair();
-        random24 = TweetNaclFast.randombytes(24);
         byte[] array = new byte[24];
         new Random().nextBytes(array);
-        clientID = new String(array, StandardCharsets.UTF_8);
-        nonce = Base64.getEncoder().encodeToString(random24);
+        clientID = b64encode(array);
+        nonce = TweetNaclFast.randombytes(24);
     }
 
     public abstract void connect() throws IOException, KeepassProxyAccessException;
@@ -63,14 +61,17 @@ public abstract class Connection implements AutoCloseable {
      */
     private void sendEncryptedMessage(Map<String, String> msg) throws IOException {
         String strMsg = jsonTxt(msg);
-        String encrypted = Base64.getEncoder().encodeToString(box.box(strMsg.getBytes(), nonce.getBytes()));
+        String encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
+
         map = new HashMap<>();
         map.put("action", msg.get("action"));
         map.put("message", encrypted);
-        map.put("nonce", nonce);
+        map.put("nonce", b64encode(nonce));
         map.put("clientID", clientID);
+
         sendCleartextMessage(jsonTxt(map));
         incrementNonce();
+
     }
 
     /**
@@ -83,17 +84,21 @@ public abstract class Connection implements AutoCloseable {
      */
     private JSONObject getEncryptedResponse() throws IOException, KeepassProxyAccessException {
         JSONObject response = getCleartextResponse();
+
         if (response.has("error")) {
             throw new KeepassProxyAccessException(response.getString("error"));
         }
-        byte[] serverNonce = Base64.getDecoder().decode(response.getString("nonce"));
-        String decrypted = Arrays.toString(box.open(
-                Base64.getDecoder().decode(response.getString("message")),
-                serverNonce));
+
+        byte[] serverNonce = b64decode(response.getString("nonce").getBytes());
+        byte[] bMessage = box.open(b64decode(response.getString("message").getBytes()), serverNonce);
+
+        String decrypted = new String(bMessage, StandardCharsets.UTF_8);
         JSONObject decryptedResponse = new JSONObject(decrypted);
+
         if (!decryptedResponse.has("success")) {
             throw new KeepassProxyAccessException(response.getString("error"));
         }
+
         return decryptedResponse;
     }
 
@@ -107,8 +112,8 @@ public abstract class Connection implements AutoCloseable {
         // Send change-public-keys request
         map = new HashMap<>();
         map.put("action", "change-public-keys");
-        map.put("publicKey", encodePublicKey(keyPair));
-        map.put("nonce", nonce);
+        map.put("publicKey", b64encode(keyPair.getPublicKey()));
+        map.put("nonce", b64encode(nonce));
         map.put("clientID", clientID);
 
         sendCleartextMessage(jsonTxt(map));
@@ -119,18 +124,19 @@ public abstract class Connection implements AutoCloseable {
         }
 
         // Store box for further communication
-        box = new TweetNaclFast.Box(response.getString("publicKey").getBytes(StandardCharsets.UTF_8), keyPair.getSecretKey());
-
+        box = new TweetNaclFast.Box(b64decode(response.getString("publicKey").getBytes()), keyPair.getSecretKey());
         incrementNonce();
+
     }
 
     public void associate() throws IOException, KeepassProxyAccessException {
         idKeyPair = TweetNaclFast.Box.keyPair();
+
         // Send associate request
         map = new HashMap<>();
         map.put("action", "associate");
-        map.put("key", encodePublicKey(keyPair));
-        map.put("idKey", encodePublicKey(idKeyPair));
+        map.put("key", b64encode(keyPair.getPublicKey()));
+        map.put("idKey", b64encode(idKeyPair.getPublicKey()));
 
         sendEncryptedMessage(map);
         JSONObject response = getEncryptedResponse();
@@ -152,19 +158,29 @@ public abstract class Connection implements AutoCloseable {
      * Increment nonce by 1
      */
     private void incrementNonce() {
-        int newNonce = ByteBuffer.wrap(nonce.getBytes()).getInt() + 1;
+        int newNonce = ByteBuffer.wrap(nonce).getInt() + 1;
         ByteBuffer dbuf = ByteBuffer.allocate(24).putInt(newNonce);
-        nonce = Base64.getEncoder().encodeToString(dbuf.array());
+        nonce = dbuf.array();
     }
 
     /**
-     * Base64 encode public key.
+     * Base64 encode array of bytes and wrap as a String.
      *
-     * @param key The secret and public key to retrieve the public key from.
-     * @return Base64 encoded public key.
+     * @param bytes The data to be ecoded.
+     * @return Base64 encoded String.
      */
-    private String encodePublicKey(TweetNaclFast.Box.KeyPair key) {
-        return Base64.getEncoder().encodeToString(key.getPublicKey());
+    private String b64encode(byte[] bytes) {
+        return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    /**
+     * Base64 decode array of bytes.
+     *
+     * @param bytes The data to be decoded.
+     * @return Base64 decoded data.
+     */
+    private byte[] b64decode(byte[] bytes) {
+        return Base64.getDecoder().decode(bytes);
     }
 
     @Override

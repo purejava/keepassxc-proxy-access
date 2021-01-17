@@ -23,5 +23,6 @@ public class KeepassProxyAccess {
     public static void main(String[] args) throws IOException, KeepassProxyAccessException {
         KeepassProxyAccess kpa = new KeepassProxyAccess();
         kpa.connection.connect();
+        kpa.connection.associate();
     }
 }
