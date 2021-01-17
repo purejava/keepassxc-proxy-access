@@ -130,10 +130,10 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Connects KeePassXC with this application.
+     * Connects KeePassXC with a new client.
      *
-     * @throws IOException Connecting KeePassXC with this application failed due to technical reasons.
-     * @throws KeepassProxyAccessException It was impossible to associate KeePassXC with this application.
+     * @throws IOException Connecting KeePassXC with a new client failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to associate KeePassXC with a new client.
      */
     public void associate() throws IOException, KeepassProxyAccessException {
         idKeyPair = TweetNaclFast.Box.keyPair();
@@ -166,6 +166,25 @@ public abstract class Connection implements AutoCloseable {
         JSONObject response = getEncryptedResponse();
 
         return response.getString("hash");
+    }
+
+    /**
+     * Request for testing if this client has been associated with KeePassXC.
+     * The test is positive when no exception is thrown.
+     *
+     * @throws IOException Testing failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to perform the test.
+     */
+    public void testAssociate() throws IOException, KeepassProxyAccessException {
+        // Send test-associate request
+        map = new HashMap<>();
+        map.put("action", "test-associate");
+        map.put("id", associate_id);
+        map.put("key", b64encode(idKeyPair.getPublicKey()));
+
+        sendEncryptedMessage(map);
+        JSONObject response = getEncryptedResponse();
+
     }
 
     /**

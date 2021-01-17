@@ -28,5 +28,6 @@ public class KeepassProxyAccess {
         kpa.connection.connect();
         kpa.connection.associate();
         log.info("Connected database has hash: {}", kpa.connection.getDatabasehash());
+        kpa.connection.testAssociate();
     }
 }
