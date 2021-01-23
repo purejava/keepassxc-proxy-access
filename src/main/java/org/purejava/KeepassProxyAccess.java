@@ -1,21 +1,17 @@
 package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
-import org.purejava.connection.Connection;
-import org.purejava.connection.LinuxMacConnection;
-import org.purejava.connection.WindowsConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.keepassxc.Connection;
+import org.keepassxc.LinuxMacConnection;
+import org.keepassxc.WindowsConnection;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class KeepassProxyAccess {
 
-    static final Logger log = LoggerFactory.getLogger(KeepassProxyAccess.class);
     private Connection connection;
 
     public KeepassProxyAccess() {
@@ -27,18 +23,44 @@ public class KeepassProxyAccess {
         }
     }
 
-    public static void main(String[] args) throws IOException, KeepassProxyAccessException {
-        KeepassProxyAccess kpa = new KeepassProxyAccess();
-        kpa.connection.connect();
-        kpa.connection.associate();
-        log.info("Connected database has hash: {}", kpa.connection.getDatabasehash());
-        kpa.connection.testAssociate();
-        List<Map<String, String>> l = new ArrayList<>();
+    /**
+     * Convenience method to get the connection parameters that are required to re-establish a connection.
+     *
+     * @return The agreed associateID and IDKeyPublicKey.
+     */
+    public Map<String, String> exportConnection() {
         Map<String, String> m = new HashMap<>();
-        m.put("id", kpa.connection.getAssociate_id());
-        m.put("key", kpa.connection.getIdKeyPairPublicKey());
-        l.add(m);
-        Map<String, Object> jo = kpa.connection.getLogins("https://github.com", null,false, l).toMap();
-        log.info("Found entries for GitHub: {}", jo.toString());
+        m.put("id", this.connection.getAssociate_id());
+        m.put("key", this.connection.getIdKeyPairPublicKey());
+        return m;
+    }
+
+    public void connect() throws IOException, KeepassProxyAccessException {
+        this.connection.connect();
+    }
+
+    public void associate() throws IOException, KeepassProxyAccessException {
+        this.connection.associate();
+    }
+
+    public void testAssociate() throws IOException, KeepassProxyAccessException {
+        this.connection.testAssociate();
+    }
+
+    public String getDatabasehash() throws IOException, KeepassProxyAccessException {
+        return this.connection.getDatabasehash();
+    }
+
+    public Map<String, Object> getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
+        return this.connection.getLogins(url, submitUrl, httpAuth, list).toMap();
+    }
+
+    // Getters
+    public String getIdKeyPairPublicKey() {
+        return this.connection.getIdKeyPairPublicKey();
+    }
+
+    public String getAssociate_id() {
+        return this.connection.getAssociate_id();
     }
 }

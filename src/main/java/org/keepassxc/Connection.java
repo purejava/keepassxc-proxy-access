@@ -1,4 +1,4 @@
-package org.purejava.connection;
+package org.keepassxc;
 
 import com.iwebpp.crypto.TweetNaclFast;
 import org.json.JSONArray;
@@ -83,7 +83,7 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException Retrieving failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
-    private JSONObject getEncryptedResponse() throws IOException, KeepassProxyAccessException {
+    private JSONObject getEncryptedResponseAndDecrypt() throws IOException, KeepassProxyAccessException {
         JSONObject response = getCleartextResponse();
 
         if (response.has("error")) {
@@ -104,7 +104,7 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * This initially exchanges public keys between KeepassXC and this application.
+     * Exchange public keys between KeepassXC and this application.
      *
      * @throws IOException Connection to the proxy failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
@@ -146,7 +146,7 @@ public abstract class Connection implements AutoCloseable {
         map.put("idKey", b64encode(idKeyPair.getPublicKey()));
 
         sendEncryptedMessage(map);
-        JSONObject response = getEncryptedResponse();
+        JSONObject response = getEncryptedResponseAndDecrypt();
 
         associate_id = response.getString("id");
     }
@@ -164,7 +164,7 @@ public abstract class Connection implements AutoCloseable {
         map.put("action", "get-databasehash");
 
         sendEncryptedMessage(map);
-        JSONObject response = getEncryptedResponse();
+        JSONObject response = getEncryptedResponseAndDecrypt();
 
         return response.getString("hash");
     }
@@ -184,7 +184,7 @@ public abstract class Connection implements AutoCloseable {
         map.put("key", b64encode(idKeyPair.getPublicKey()));
 
         sendEncryptedMessage(map);
-        JSONObject response = getEncryptedResponse();
+        getEncryptedResponseAndDecrypt();
 
     }
 
@@ -219,7 +219,7 @@ public abstract class Connection implements AutoCloseable {
         map.put("keys", array);
 
         sendEncryptedMessage(map);
-        return getEncryptedResponse();
+        return getEncryptedResponseAndDecrypt();
 
     }
 

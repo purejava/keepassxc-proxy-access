@@ -1,4 +1,4 @@
-package org.purejava.connection;
+package org.keepassxc;
 
 import org.json.JSONObject;
 import org.purejava.KeepassProxyAccessException;

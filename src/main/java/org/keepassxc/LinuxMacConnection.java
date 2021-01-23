@@ -1,4 +1,4 @@
-package org.purejava.connection;
+package org.keepassxc;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONObject;
