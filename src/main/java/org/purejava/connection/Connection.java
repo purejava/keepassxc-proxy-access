@@ -1,6 +1,7 @@
 package org.purejava.connection;
 
 import com.iwebpp.crypto.TweetNaclFast;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.purejava.KeepassProxyAccessException;
 
@@ -19,7 +20,7 @@ public abstract class Connection implements AutoCloseable {
     private TweetNaclFast.Box.KeyPair keyPair;
     private TweetNaclFast.Box.KeyPair idKeyPair;
     private String clientID;
-    private Map<String, String> map;
+    private Map<String, Object> map;
     private byte[] nonce;
     private String associate_id;
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
@@ -59,12 +60,12 @@ public abstract class Connection implements AutoCloseable {
      * @param msg The message to be sent. The key "action" describes the request to the proxy.
      * @throws IOException Sending failed due to technical reasons.
      */
-    private void sendEncryptedMessage(Map<String, String> msg) throws IOException {
+    private void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
         String strMsg = jsonTxt(msg);
         String encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
 
         map = new HashMap<>();
-        map.put("action", msg.get("action"));
+        map.put("action", msg.get("action").toString());
         map.put("message", encrypted);
         map.put("nonce", b64encode(nonce));
         map.put("clientID", clientID);
@@ -188,12 +189,47 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request credentials from KeePassXC databases for a given URL.
+     *
+     * @param url The URL credentials are looked up for.
+     * @param submitUrl URL that can be passed along amd gets added to entry properties.
+     * @param httpAuth Include database entries into search that are restricted to HTTP Basic Auth.
+     * @param list Id / key combinations identifying and granting access to KeePassXC databases.
+     * @return An object that contains all found credentials together with additional information.
+     * @throws IOException Requesting credentials failed due to technical reasons.
+     * @throws KeepassProxyAccessException No credentials found for the given URL.
+     */
+    public JSONObject getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
+        JSONArray array = new JSONArray();
+        // Syntax check for list
+        for (Map<String, String> m : list) {
+            JSONObject o = new JSONObject(m);
+            if (!(o.has("id") && o.has("key") && o.length() == 2)) {
+                throw new KeepassProxyAccessException("JSON object key is malformed");
+            }
+            array.put(m);
+        }
+
+        // Send get-logins
+        map = new HashMap<>();
+        map.put("action", "get-logins");
+        map.put("url", url);
+        map.put("submitUrl", submitUrl);
+        map.put("httpAuth", httpAuth);
+        map.put("keys", array);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponse();
+
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.
      * @return String representation of the JSON object.
      */
-    private String jsonTxt(Map<String, String> keysValues) {
+    private String jsonTxt(Map<String, Object> keysValues) {
         return new JSONObject(keysValues).toString();
     }
 
@@ -224,6 +260,15 @@ public abstract class Connection implements AutoCloseable {
      */
     private byte[] b64decode(byte[] bytes) {
         return Base64.getDecoder().decode(bytes);
+    }
+
+    // Getters
+    public String getIdKeyPairPublicKey() {
+        return b64encode(idKeyPair.getPublicKey());
+    }
+
+    public String getAssociate_id() {
+        return associate_id;
     }
 
     @Override
