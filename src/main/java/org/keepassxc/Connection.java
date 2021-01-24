@@ -87,7 +87,7 @@ public abstract class Connection implements AutoCloseable {
         JSONObject response = getCleartextResponse();
 
         if (response.has("error")) {
-            throw new KeepassProxyAccessException(response.getString("error"));
+            throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
         byte[] serverNonce = b64decode(response.getString("nonce").getBytes());
@@ -97,7 +97,7 @@ public abstract class Connection implements AutoCloseable {
         JSONObject decryptedResponse = new JSONObject(decrypted);
 
         if (!decryptedResponse.has("success")) {
-            throw new KeepassProxyAccessException(response.getString("error"));
+            throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
         return decryptedResponse;
@@ -121,7 +121,7 @@ public abstract class Connection implements AutoCloseable {
         JSONObject response = getCleartextResponse();
 
         if (!response.has("success")) {
-            throw new KeepassProxyAccessException(response.getString("error"));
+            throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
         // Store box for further communication
@@ -173,7 +173,7 @@ public abstract class Connection implements AutoCloseable {
      * Request for testing if this client has been associated with KeePassXC.
      * The test is positive when no exception is thrown.
      *
-     * @param id The identifier of the KeePassXC database connection to be tested.
+     * @param id  The identifier of the KeePassXC database connection to be tested.
      * @param key The public key of the idKeyPair to be tested.
      * @throws IOException                 Testing failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to perform the test.
