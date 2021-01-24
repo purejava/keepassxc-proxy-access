@@ -1,6 +1,7 @@
 package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.json.JSONObject;
 import org.keepassxc.Connection;
 import org.keepassxc.LinuxMacConnection;
 import org.keepassxc.WindowsConnection;
@@ -57,6 +58,10 @@ public class KeepassProxyAccess {
 
     public Map<String, Object> setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
         return this.connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid).toMap();
+    }
+
+    public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
+        return this.connection.getDatabaseGroups();
     }
 
     // Getters

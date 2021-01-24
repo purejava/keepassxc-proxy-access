@@ -1,5 +1,6 @@
 package org.purejava;
 
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,5 +26,6 @@ public class App {
         if (output.get("success").toString().equals("true")) {
             log.info("Credentials were successfully stored in database.");
         }
+        log.info("The database contains the following groups: "+ kpa.getDatabaseGroups().toString());
     }
 }

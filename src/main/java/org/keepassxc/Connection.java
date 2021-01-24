@@ -226,7 +226,7 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Store a new entry in the current KeePassXC database.
+     * Request to store a new entry in the current KeePassXC database.
      *
      * @param url       The URL to be saved. The title of the new entry is the hostname of the URL.
      * @param submitUrl URL that can be passed along amd gets added to entry properties.
@@ -257,6 +257,23 @@ public abstract class Connection implements AutoCloseable {
         map.put("group", group);
         map.put("groupUuid", group);
         map.put("uuid", uuid);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponseAndDecrypt();
+
+    }
+
+    /**
+     * Request to retrieve all database groups together with their groupUuids.
+     *
+     * @return An object that contains the database groups and groupUuids.
+     * @throws IOException The request to retrieve the groups failed due to technical reasons.
+     * @throws KeepassProxyAccessException The groups could not be retrieved or there weren't any.
+     */
+    public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
+        // Send get-database-groups
+        map = new HashMap<>();
+        map.put("action", "get-database-groups");
 
         sendEncryptedMessage(map);
         return getEncryptedResponseAndDecrypt();
