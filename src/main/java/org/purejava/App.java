@@ -16,7 +16,7 @@ public class App {
         kpa.connect();
         kpa.associate();
         log.info("Connected database has hash: {}", kpa.getDatabasehash());
-        kpa.testAssociate();
+        kpa.testAssociate(kpa.getAssociate_id(), kpa.getIdKeyPairPublicKey());
         List<Map<String, String>> l = new ArrayList<>();
         l.add(kpa.exportConnection());
         Map<String, Object> jo = kpa.getLogins("https://github.com", null, false, l);

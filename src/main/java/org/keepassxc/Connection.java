@@ -173,15 +173,17 @@ public abstract class Connection implements AutoCloseable {
      * Request for testing if this client has been associated with KeePassXC.
      * The test is positive when no exception is thrown.
      *
+     * @param id The identifier of the KeePassXC database connection to be tested.
+     * @param key The public key of the idKeyPair to be tested.
      * @throws IOException                 Testing failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to perform the test.
      */
-    public void testAssociate() throws IOException, KeepassProxyAccessException {
+    public void testAssociate(String id, String key) throws IOException, KeepassProxyAccessException {
         // Send test-associate request
         map = new HashMap<>();
         map.put("action", "test-associate");
-        map.put("id", associate_id);
-        map.put("key", b64encode(idKeyPair.getPublicKey()));
+        map.put("id", id);
+        map.put("key", key);
 
         sendEncryptedMessage(map);
         getEncryptedResponseAndDecrypt();
@@ -228,7 +230,7 @@ public abstract class Connection implements AutoCloseable {
      *
      * @param url       The URL to be saved. The title of the new entry is the hostname of the URL.
      * @param submitUrl URL that can be passed along amd gets added to entry properties.
-     * @param id        An identifier for the KeePassXC database - ignored at the moment.
+     * @param id        An identifier for the KeePassXC database connection - ignored at the moment.
      * @param login     The username to be saved.
      * @param password  The password to be saved.
      * @param group     The group name to be used for new entries. Must contain something to use an existing group, but

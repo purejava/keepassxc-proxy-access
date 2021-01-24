@@ -43,8 +43,8 @@ public class KeepassProxyAccess {
         this.connection.associate();
     }
 
-    public void testAssociate() throws IOException, KeepassProxyAccessException {
-        this.connection.testAssociate();
+    public void testAssociate(String id, String key) throws IOException, KeepassProxyAccessException {
+        this.connection.testAssociate(id, key);
     }
 
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
