@@ -55,6 +55,10 @@ public class KeepassProxyAccess {
         return this.connection.getLogins(url, submitUrl, httpAuth, list).toMap();
     }
 
+    public Map<String, Object> setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
+        return this.connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid).toMap();
+    }
+
     // Getters
     public String getIdKeyPairPublicKey() {
         return this.connection.getIdKeyPairPublicKey();

@@ -19,7 +19,11 @@ public class App {
         kpa.testAssociate();
         List<Map<String, String>> l = new ArrayList<>();
         l.add(kpa.exportConnection());
-        Map<String, Object> jo = kpa.getLogins("https://github.com", null,false, l);
+        Map<String, Object> jo = kpa.getLogins("https://github.com", null, false, l);
         log.info("Found entries for GitHub: {}", jo.toString());
+        Map<String, Object> output = kpa.setLogin("https://github.com", "https://github.com", null, "User", "Passsword", "Group", null, null);
+        if (output.get("success").toString().equals("true")) {
+            log.info("Credentials were successfully stored in database.");
+        }
     }
 }

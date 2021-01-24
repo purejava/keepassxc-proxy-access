@@ -80,7 +80,7 @@ public abstract class Connection implements AutoCloseable {
      * The proxy sends messages in the JSON data format.
      *
      * @return The received message.
-     * @throws IOException Retrieving failed due to technical reasons.
+     * @throws IOException                 Retrieving failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
     private JSONObject getEncryptedResponseAndDecrypt() throws IOException, KeepassProxyAccessException {
@@ -106,7 +106,7 @@ public abstract class Connection implements AutoCloseable {
     /**
      * Exchange public keys between KeepassXC and this application.
      *
-     * @throws IOException Connection to the proxy failed due to technical reasons.
+     * @throws IOException                 Connection to the proxy failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
      */
     protected void changePublibKeys() throws IOException, KeepassProxyAccessException {
@@ -133,7 +133,7 @@ public abstract class Connection implements AutoCloseable {
     /**
      * Connects KeePassXC with a new client.
      *
-     * @throws IOException Connecting KeePassXC with a new client failed due to technical reasons.
+     * @throws IOException                 Connecting KeePassXC with a new client failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to associate KeePassXC with a new client.
      */
     public void associate() throws IOException, KeepassProxyAccessException {
@@ -155,7 +155,7 @@ public abstract class Connection implements AutoCloseable {
      * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
      *
      * @return The database hash of the current active KeePassXC database.
-     * @throws IOException Retrieving the hash failed due to technical reasons.
+     * @throws IOException                 Retrieving the hash failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to get the hash.
      */
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
@@ -173,7 +173,7 @@ public abstract class Connection implements AutoCloseable {
      * Request for testing if this client has been associated with KeePassXC.
      * The test is positive when no exception is thrown.
      *
-     * @throws IOException Testing failed due to technical reasons.
+     * @throws IOException                 Testing failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to perform the test.
      */
     public void testAssociate() throws IOException, KeepassProxyAccessException {
@@ -191,12 +191,12 @@ public abstract class Connection implements AutoCloseable {
     /**
      * Request credentials from KeePassXC databases for a given URL.
      *
-     * @param url The URL credentials are looked up for.
+     * @param url       The URL credentials are looked up for.
      * @param submitUrl URL that can be passed along amd gets added to entry properties.
-     * @param httpAuth Include database entries into search that are restricted to HTTP Basic Auth.
-     * @param list Id / key combinations identifying and granting access to KeePassXC databases.
+     * @param httpAuth  Include database entries into search that are restricted to HTTP Basic Auth.
+     * @param list      Id / key combinations identifying and granting access to KeePassXC databases.
      * @return An object that contains all found credentials together with additional information.
-     * @throws IOException Requesting credentials failed due to technical reasons.
+     * @throws IOException                 Requesting credentials failed due to technical reasons.
      * @throws KeepassProxyAccessException No credentials found for the given URL.
      */
     public JSONObject getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
@@ -217,6 +217,44 @@ public abstract class Connection implements AutoCloseable {
         map.put("submitUrl", submitUrl);
         map.put("httpAuth", httpAuth);
         map.put("keys", array);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponseAndDecrypt();
+
+    }
+
+    /**
+     * Store a new entry in the current KeePassXC database.
+     *
+     * @param url       The URL to be saved. The title of the new entry is the hostname of the URL.
+     * @param submitUrl URL that can be passed along amd gets added to entry properties.
+     * @param id        An identifier for the KeePassXC database - ignored at the moment.
+     * @param login     The username to be saved.
+     * @param password  The password to be saved.
+     * @param group     The group name to be used for new entries. Must contain something to use an existing group, but
+     *                  the content is ignored, as a group is identified by the groupUuid. In case there is no group with
+     *                  the given groupUuid, the standard group is used to store the entry.
+     * @param groupUuid Identifier to decide, where to store the entry. For an existing group, the groupUuid must be
+     *                  given, otherwise the standard group is used to store the entry.
+     * @param uuid      Identifier whether an existing entry is updated or a new one is created. If empty, the entry is
+     *                  stored in the given groupUuid.
+     * @return An object that contains the key "success" with the value "true" in case the request was successful.
+     * @throws IOException                 The request to store credentials failed due to technical reasons.
+     * @throws KeepassProxyAccessException Credentials could not be stored in the KeePassXC database.
+     */
+    public JSONObject setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
+        // Send set-login
+        map = new HashMap<>();
+        map.put("action", "set-login");
+        map.put("url", url);
+        map.put("submitUrl", submitUrl);
+        map.put("id", id);
+        map.put("nonce", b64encode(nonce));
+        map.put("login", login);
+        map.put("password", password);
+        map.put("group", group);
+        map.put("groupUuid", group);
+        map.put("uuid", uuid);
 
         sendEncryptedMessage(map);
         return getEncryptedResponseAndDecrypt();
@@ -262,8 +300,15 @@ public abstract class Connection implements AutoCloseable {
         return Base64.getDecoder().decode(bytes);
     }
 
+    private String generateHEXUUID() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
     // Getters
     public String getIdKeyPairPublicKey() {
+        if (null == idKeyPair) {
+            return null;
+        }
         return b64encode(idKeyPair.getPublicKey());
     }
 
