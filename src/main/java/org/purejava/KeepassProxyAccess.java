@@ -7,6 +7,7 @@ import org.keepassxc.LinuxMacConnection;
 import org.keepassxc.WindowsConnection;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,38 @@ public class KeepassProxyAccess {
         return this.connection.getDatabaseGroups();
     }
 
-    // Getters
+    /**
+     * This recursively flattens a JSONObject that contains all groups of the KeePassXC database to a map
+     * with key = group and value = groupUuid.
+     *
+     * @param groups Input data to get processed.
+     * @return Groups with their according groupUuids.
+     */
+    public Map<String, String> databaseGroupsToMap(JSONObject groups) {
+        Map<String, String> groupTree = new HashMap<>();
+        Map<String, Object> m = groups.toMap();
+        Map<String, Object> n = (HashMap<String, Object>) m.get("groups");
+        List<Object> rootGroups = (ArrayList<Object>) n.get("groups");
+        Map<String, Object> rootGroup = (HashMap<String, Object>) rootGroups.get(0);
+        List<Object> children = (ArrayList<Object>) rootGroup.get("children");
+        traverse(children, groupTree);
+        return groupTree;
+    }
+
+    private void traverse(List<Object> children, Map<String, String> groups) {
+        children.stream()
+                .map(listItem -> (HashMap<String, Object>) listItem)
+                .forEach(li -> {
+                    List<Object> alc = (ArrayList<Object>) li.get("children");
+                        if (alc.size() == 0) {
+                            groups.put(li.get("name").toString(), li.get("uuid").toString());
+                        } else {
+                            groups.put(li.get("name").toString(), li.get("uuid").toString());
+                            traverse(alc, groups);
+                        }
+                });
+    }
+
     public String getIdKeyPairPublicKey() {
         return this.connection.getIdKeyPairPublicKey();
     }

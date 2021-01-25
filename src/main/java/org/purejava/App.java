@@ -26,6 +26,6 @@ public class App {
         if (output.get("success").toString().equals("true")) {
             log.info("Credentials were successfully stored in database.");
         }
-        log.info("The database contains the following groups: "+ kpa.getDatabaseGroups().toString());
+        log.info("The database contains the following groups: "+ kpa.databaseGroupsToMap(kpa.getDatabaseGroups()));
     }
 }
