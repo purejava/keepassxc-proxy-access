@@ -328,7 +328,7 @@ public abstract class Connection implements AutoCloseable {
         return null == idKeyPair ? null : b64encode(idKeyPair.getPublicKey());
     }
 
-    public String getAssociate_id() {
+    public String getAssociateId() {
         return associate_id;
     }
 

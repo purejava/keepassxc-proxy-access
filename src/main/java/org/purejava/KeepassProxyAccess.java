@@ -32,7 +32,7 @@ public class KeepassProxyAccess {
      */
     public Map<String, String> exportConnection() {
         Map<String, String> m = new HashMap<>();
-        m.put("id", this.connection.getAssociate_id());
+        m.put("id", this.connection.getAssociateId());
         m.put("key", this.connection.getIdKeyPairPublicKey());
         return m;
     }
@@ -102,6 +102,6 @@ public class KeepassProxyAccess {
     }
 
     public String getAssociate_id() {
-        return this.connection.getAssociate_id();
+        return this.connection.getAssociateId();
     }
 }

@@ -22,11 +22,10 @@ public class LinuxMacConnection extends Connection {
     private AFUNIXSocket socket;
     private OutputStream os;
     private InputStream is;
-    private String socketPath;
     private final File socketFile;
 
     public LinuxMacConnection() {
-        this.socketPath = getSocketPath();
+        String socketPath = getSocketPath();
         this.socketFile = new File(new File(socketPath), "/" + PROXY_NAME);
     }
 
