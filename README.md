@@ -11,4 +11,6 @@ A Java library to access KeePassXC via its build-in proxy.
 # Copyright
 Copyright (C) 2021 Ralph Plawetzki
 
+The keepassxc-proxy-access logo is based on an [ICONFINDER logo](https://www.iconfinder.com/icons/4484570/hosting_link_proxy_server_url_window_icon) that is published under the [Creative Commons Attribution 3.0 Unported licence](https://creativecommons.org/licenses/by/3.0/) (CC BY 3.0). I modified the icon to my needs by changing the interior and adding the KeePassXC logo.
+
 The KeePassXC logo is Copyright (C) of https://keepassxc.org/
