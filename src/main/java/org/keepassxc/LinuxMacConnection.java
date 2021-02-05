@@ -33,7 +33,7 @@ public class LinuxMacConnection extends Connection {
      * Connect to the KeePassXC proxy via a Unix Domain Sockets (AF_UNIX)
      * the proxy has opened.
      *
-     * @throws IOException Connecting to the proxy failed due to technical reasons or the proxy wasn't started.
+     * @throws IOException                 Connecting to the proxy failed due to technical reasons or the proxy wasn't started.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
      */
     @Override
@@ -59,9 +59,13 @@ public class LinuxMacConnection extends Connection {
 
     @Override
     protected JSONObject getCleartextResponse() throws IOException {
-        byte[] buf = new byte[4096];
-        int read = is.read(buf);
-        return new JSONObject(new String(buf, 0, read, StandardCharsets.UTF_8));
+        int c;
+        String raw = "";
+        do {
+            c = is.read();
+            raw += (char) c;
+        } while (c != 125); // end of transmission
+        return new JSONObject(raw);
     }
 
     /**

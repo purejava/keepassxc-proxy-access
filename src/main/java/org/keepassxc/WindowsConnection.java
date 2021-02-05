@@ -41,9 +41,13 @@ public class WindowsConnection extends Connection {
 
     @Override
     protected JSONObject getCleartextResponse() throws IOException {
-        byte[] buf = new byte[4096];
-        int read = pipe.read(buf);
-        return new JSONObject(new String(buf, 0, read, StandardCharsets.UTF_8));
+        int c;
+        String raw = "";
+        do {
+            c = pipe.read();
+            raw += (char) c;
+        } while (c != 125); // end of transmission
+        return new JSONObject(raw);
     }
 
     @Override
