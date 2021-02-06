@@ -27,5 +27,6 @@ public class App {
         }
         log.info("The database contains the following groups: "+ kpa.databaseGroupsToMap(kpa.getDatabaseGroups()));
         log.info("Newly generated password according to the password generator settings: " + kpa.generatePassword());
+        log.info("Effort to lock the database was successful: " + kpa.lockDatabase());
     }
 }

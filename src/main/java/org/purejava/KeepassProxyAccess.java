@@ -71,6 +71,11 @@ public class KeepassProxyAccess {
         return response.getJSONObject(0).getString("password");
     }
 
+    public boolean lockDatabase() throws IOException, KeepassProxyAccessException {
+        JSONObject response = this.connection.lockDatabase();
+        return response.has("action") && response.getString("action").equals("database-locked");
+    }
+
     /**
      * This recursively flattens a JSONObject that contains all groups of the KeePassXC database to a map
      * with key = group and value = groupUuid.

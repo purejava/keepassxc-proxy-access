@@ -90,6 +90,10 @@ public abstract class Connection implements AutoCloseable {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
+        if (response.has("action") && response.getString("action").equals("database-locked")) {
+            return response;
+        }
+
         byte[] serverNonce = b64decode(response.getString("nonce").getBytes());
         byte[] bMessage = box.open(b64decode(response.getString("message").getBytes()), serverNonce);
 
@@ -267,7 +271,7 @@ public abstract class Connection implements AutoCloseable {
      * Request to retrieve all database groups together with their groupUuids.
      *
      * @return An object that contains the database groups and groupUuids.
-     * @throws IOException The request to retrieve the groups failed due to technical reasons.
+     * @throws IOException                 The request to retrieve the groups failed due to technical reasons.
      * @throws KeepassProxyAccessException The groups could not be retrieved or there weren't any.
      */
     public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
@@ -284,7 +288,7 @@ public abstract class Connection implements AutoCloseable {
      * Request to generate a password according to the password generator settings.
      *
      * @return The newly generated password.
-     * @throws IOException The request to generate a password failed due to technical reasons.
+     * @throws IOException                 The request to generate a password failed due to technical reasons.
      * @throws KeepassProxyAccessException The password could not be generated.
      */
     public JSONObject generatePassword() throws IOException, KeepassProxyAccessException {
@@ -293,6 +297,23 @@ public abstract class Connection implements AutoCloseable {
         map.put("action", "generate-password");
         map.put("nonce", b64encode(nonce));
         map.put("clientID", clientID);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponseAndDecrypt();
+
+    }
+
+    /**
+     * Request for locking the database from client.
+     *
+     * @return An object that contains the key "action" with the value "database-locked" in case the request was successful.
+     * @throws IOException                 The request to lock the database failed due to technical reasons.
+     * @throws KeepassProxyAccessException The database could not be locked.
+     */
+    public JSONObject lockDatabase() throws IOException, KeepassProxyAccessException {
+        // Send lock-database request
+        map = new HashMap<>();
+        map.put("action", "lock-database");
 
         sendEncryptedMessage(map);
         return getEncryptedResponseAndDecrypt();
