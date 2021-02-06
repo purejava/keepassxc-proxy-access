@@ -281,6 +281,25 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request to generate a password according to the password generator settings.
+     *
+     * @return The newly generated password.
+     * @throws IOException The request to generate a password failed due to technical reasons.
+     * @throws KeepassProxyAccessException The password could not be generated.
+     */
+    public JSONObject generatePassword() throws IOException, KeepassProxyAccessException {
+        // Send generate-password request
+        map = new HashMap<>();
+        map.put("action", "generate-password");
+        map.put("nonce", b64encode(nonce));
+        map.put("clientID", clientID);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponseAndDecrypt();
+
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.

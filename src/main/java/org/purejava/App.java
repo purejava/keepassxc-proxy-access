@@ -26,5 +26,6 @@ public class App {
             log.info("Credentials were successfully stored in database.");
         }
         log.info("The database contains the following groups: "+ kpa.databaseGroupsToMap(kpa.getDatabaseGroups()));
+        log.info("Newly generated password according to the password generator settings: " + kpa.generatePassword());
     }
 }

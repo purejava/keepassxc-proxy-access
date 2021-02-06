@@ -1,6 +1,7 @@
 package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.keepassxc.Connection;
 import org.keepassxc.LinuxMacConnection;
@@ -63,6 +64,11 @@ public class KeepassProxyAccess {
 
     public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
         return this.connection.getDatabaseGroups();
+    }
+
+    public String generatePassword() throws IOException, KeepassProxyAccessException {
+        JSONArray response = this.connection.generatePassword().getJSONArray("entries");
+        return response.getJSONObject(0).getString("password");
     }
 
     /**
