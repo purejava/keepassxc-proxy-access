@@ -76,6 +76,24 @@ public class KeepassProxyAccess {
         return response.has("action") && response.getString("action").equals("database-locked");
     }
 
+    public JSONObject createNewGroup(String path) throws IOException, KeepassProxyAccessException {
+        return this.connection.createNewGroup(path);
+    }
+
+    /**
+     * Extract the groupUuid for the newly created group.
+     * Note: in case a group with the following path was created: level1/level2, only level2 gets returned as name.
+     *
+     * @param jo Input data to get processed.
+     * @return Last part of the path name of the group that was created with its according groupUuid.
+     */
+    public Map<String, String> getNewGroupId(JSONObject jo) {
+        Map<String, String> m = new HashMap<>();
+        m.put("name", jo.getString("name"));
+        m.put("uuid", jo.getString("uuid"));
+        return m;
+    }
+
     /**
      * This recursively flattens a JSONObject that contains all groups of the KeePassXC database to a map
      * with key = group and value = groupUuid.
@@ -99,12 +117,12 @@ public class KeepassProxyAccess {
                 .map(listItem -> (HashMap<String, Object>) listItem)
                 .forEach(li -> {
                     List<Object> alc = (ArrayList<Object>) li.get("children");
-                        if (alc.size() == 0) {
-                            groups.put(li.get("name").toString(), li.get("uuid").toString());
-                        } else {
-                            groups.put(li.get("name").toString(), li.get("uuid").toString());
-                            traverse(alc, groups);
-                        }
+                    if (alc.size() == 0) {
+                        groups.put(li.get("name").toString(), li.get("uuid").toString());
+                    } else {
+                        groups.put(li.get("name").toString(), li.get("uuid").toString());
+                        traverse(alc, groups);
+                    }
                 });
     }
 

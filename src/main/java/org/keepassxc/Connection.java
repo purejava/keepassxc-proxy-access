@@ -321,6 +321,27 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request to create a new group for the given name or path. If the group already exists, its contents and
+     * groupUuid stay untouched.
+     *
+     * @param path Name or path. A path of the format level1/level2 creates a group level1 on the root level and a
+     *             group level2 as a child of level1.
+     * @return Last part of the path name of the group that was created with its according groupUuid.
+     * @throws IOException                 The request to create the group failed due to technical reasons.
+     * @throws KeepassProxyAccessException The group could not be created.
+     */
+    public JSONObject createNewGroup(String path) throws IOException, KeepassProxyAccessException {
+        // Send create-new-group request
+        map = new HashMap<>();
+        map.put("action", "create-new-group");
+        map.put("groupName", path);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponseAndDecrypt();
+
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.
