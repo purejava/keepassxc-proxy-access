@@ -32,10 +32,8 @@ public class KeepassProxyAccess {
      * @return The agreed associateID and IDKeyPublicKey.
      */
     public Map<String, String> exportConnection() {
-        Map<String, String> m = new HashMap<>();
-        m.put("id", this.connection.getAssociateId());
-        m.put("key", this.connection.getIdKeyPairPublicKey());
-        return m;
+        return Map.of("id", this.connection.getAssociateId(),
+                "key", this.connection.getIdKeyPairPublicKey());
     }
 
     public void connect() throws IOException, KeepassProxyAccessException {
@@ -92,10 +90,8 @@ public class KeepassProxyAccess {
      * @return Last part of the path name of the group that was created with its according groupUuid.
      */
     public Map<String, String> getNewGroupId(JSONObject jo) {
-        Map<String, String> m = new HashMap<>();
-        m.put("name", jo.getString("name"));
-        m.put("uuid", jo.getString("uuid"));
-        return m;
+        return Map.of("name", jo.getString("name"),
+                "uuid", jo.getString("uuid"));
     }
 
     /**

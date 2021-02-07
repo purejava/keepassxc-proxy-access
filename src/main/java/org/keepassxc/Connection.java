@@ -64,13 +64,12 @@ public abstract class Connection implements AutoCloseable {
         String strMsg = jsonTxt(msg);
         String encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
 
-        map = new HashMap<>();
-        map.put("action", msg.get("action").toString());
-        map.put("message", encrypted);
-        map.put("nonce", b64encode(nonce));
-        map.put("clientID", clientID);
-
-        sendCleartextMessage(jsonTxt(map));
+        sendCleartextMessage(jsonTxt(Map.of(
+                "action", msg.get("action").toString(),
+                "message", encrypted,
+                "nonce", b64encode(nonce),
+                "clientID", clientID
+        )));
         incrementNonce();
 
     }
@@ -115,13 +114,12 @@ public abstract class Connection implements AutoCloseable {
      */
     protected void changePublibKeys() throws IOException, KeepassProxyAccessException {
         // Send change-public-keys request
-        map = new HashMap<>();
-        map.put("action", "change-public-keys");
-        map.put("publicKey", b64encode(keyPair.getPublicKey()));
-        map.put("nonce", b64encode(nonce));
-        map.put("clientID", clientID);
-
-        sendCleartextMessage(jsonTxt(map));
+        sendCleartextMessage(jsonTxt(Map.of(
+                "action", "change-public-keys",
+                "publicKey", b64encode(keyPair.getPublicKey()),
+                "nonce", b64encode(nonce),
+                "clientID", clientID
+        )));
         JSONObject response = getCleartextResponse();
 
         if (!response.has("success")) {
@@ -144,12 +142,11 @@ public abstract class Connection implements AutoCloseable {
         idKeyPair = TweetNaclFast.Box.keyPair();
 
         // Send associate request
-        map = new HashMap<>();
-        map.put("action", "associate");
-        map.put("key", b64encode(keyPair.getPublicKey()));
-        map.put("idKey", b64encode(idKeyPair.getPublicKey()));
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "associate",
+                "key", b64encode(keyPair.getPublicKey()),
+                "idKey", b64encode(idKeyPair.getPublicKey())
+        ));
         JSONObject response = getEncryptedResponseAndDecrypt();
 
         associate_id = response.getString("id");
@@ -164,10 +161,7 @@ public abstract class Connection implements AutoCloseable {
      */
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request
-        map = new HashMap<>();
-        map.put("action", "get-databasehash");
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of("action", "get-databasehash"));
         JSONObject response = getEncryptedResponseAndDecrypt();
 
         return response.getString("hash");
@@ -184,12 +178,11 @@ public abstract class Connection implements AutoCloseable {
      */
     public void testAssociate(String id, String key) throws IOException, KeepassProxyAccessException {
         // Send test-associate request
-        map = new HashMap<>();
-        map.put("action", "test-associate");
-        map.put("id", id);
-        map.put("key", key);
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "test-associate",
+                "id", id,
+                "key", key
+        ));
         getEncryptedResponseAndDecrypt();
 
     }
@@ -217,14 +210,13 @@ public abstract class Connection implements AutoCloseable {
         }
 
         // Send get-logins
-        map = new HashMap<>();
-        map.put("action", "get-logins");
-        map.put("url", url);
-        map.put("submitUrl", submitUrl);
-        map.put("httpAuth", httpAuth);
-        map.put("keys", array);
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "get-logins",
+                "url", ensureNotNull(url),
+                "submitUrl", ensureNotNull(submitUrl),
+                "httpAuth", httpAuth,
+                "keys", array
+        ));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -250,19 +242,18 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
         // Send set-login
-        map = new HashMap<>();
-        map.put("action", "set-login");
-        map.put("url", url);
-        map.put("submitUrl", submitUrl);
-        map.put("id", id);
-        map.put("nonce", b64encode(nonce));
-        map.put("login", login);
-        map.put("password", password);
-        map.put("group", group);
-        map.put("groupUuid", group);
-        map.put("uuid", uuid);
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "set-login",
+                "url", ensureNotNull(url),
+                "submitUrl", ensureNotNull(submitUrl),
+                "id", ensureNotNull(id),
+                "nonce", b64encode(nonce),
+                "login", ensureNotNull(login),
+                "password", ensureNotNull(password),
+                "group", ensureNotNull(group),
+                "groupUuid", ensureNotNull(groupUuid),
+                "uuid", ensureNotNull(uuid)
+        ));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -276,10 +267,7 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
         // Send get-database-groups
-        map = new HashMap<>();
-        map.put("action", "get-database-groups");
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of("action", "get-database-groups"));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -293,12 +281,11 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject generatePassword() throws IOException, KeepassProxyAccessException {
         // Send generate-password request
-        map = new HashMap<>();
-        map.put("action", "generate-password");
-        map.put("nonce", b64encode(nonce));
-        map.put("clientID", clientID);
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "generate-password",
+                "nonce", b64encode(nonce),
+                "clientID", clientID
+        ));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -312,10 +299,7 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject lockDatabase() throws IOException, KeepassProxyAccessException {
         // Send lock-database request
-        map = new HashMap<>();
-        map.put("action", "lock-database");
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of("action", "lock-database"));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -332,11 +316,10 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject createNewGroup(String path) throws IOException, KeepassProxyAccessException {
         // Send create-new-group request
-        map = new HashMap<>();
-        map.put("action", "create-new-group");
-        map.put("groupName", path);
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "create-new-group",
+                "groupName", ensureNotNull(path)
+        ));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -352,11 +335,10 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject getTotp(String uuid) throws IOException, KeepassProxyAccessException {
         // Send get-totp request
-        map = new HashMap<>();
-        map.put("action", "get-totp");
-        map.put("uuid", uuid);
-
-        sendEncryptedMessage(map);
+        sendEncryptedMessage(Map.of(
+                "action", "get-totp",
+                "uuid", ensureNotNull(uuid)
+        ));
         return getEncryptedResponseAndDecrypt();
 
     }
@@ -402,6 +384,10 @@ public abstract class Connection implements AutoCloseable {
 
     private String generateHEXUUID() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private String ensureNotNull(String param) {
+        return null == param ? "" : param;
     }
 
     // Getters
