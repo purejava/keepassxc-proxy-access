@@ -80,6 +80,10 @@ public class KeepassProxyAccess {
         return this.connection.createNewGroup(path);
     }
 
+    public String getTotp(String uuid) throws IOException, KeepassProxyAccessException {
+        return this.connection.getTotp(uuid).getString("totp");
+    }
+
     /**
      * Extract the groupUuid for the newly created group.
      * Note: in case a group with the following path was created: level1/level2, only level2 gets returned as name.

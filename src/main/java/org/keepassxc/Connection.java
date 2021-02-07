@@ -342,6 +342,26 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request the actual TOTP for the given entry, identified by its uuid. If TOTP is not configured for the entry,
+     * an empty String is returned.
+     *
+     * @param uuid The uuid of the entry.
+     * @return The TOTP for the entry or an empty String in case TOTP is not configured for that entry.
+     * @throws IOException                 The request to get the TOTP for an entry failed due to technical reasons.
+     * @throws KeepassProxyAccessException The TOTP could not be retrieved.
+     */
+    public JSONObject getTotp(String uuid) throws IOException, KeepassProxyAccessException {
+        // Send get-totp request
+        map = new HashMap<>();
+        map.put("action", "get-totp");
+        map.put("uuid", uuid);
+
+        sendEncryptedMessage(map);
+        return getEncryptedResponseAndDecrypt();
+
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.
