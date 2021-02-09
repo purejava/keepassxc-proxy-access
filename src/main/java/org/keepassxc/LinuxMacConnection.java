@@ -76,7 +76,8 @@ public class LinuxMacConnection extends Connection {
     private String getSocketPath() {
         if (SystemUtils.IS_OS_LINUX) {
             String path = System.getenv("XDG_RUNTIME_DIR");
-            return (path == null) ? System.getenv("TMPDIR") : System.getenv("XDG_RUNTIME_DIR");
+            if (null == path) path = System.getenv("TMPDIR");
+            return (null == path) ? "/tmp" : path;
         }
         if (SystemUtils.IS_OS_MAC_OSX) {
             return System.getenv("TMPDIR");

@@ -24,7 +24,7 @@ public class KeepassProxyAccessTest {
             kpa.associate();
         });
 
-        String expectedMessage = "Connection refused";
+        String expectedMessage = "No such file or directory";
         String actualMessage = exception.getMessage();
 
         assertTrue(actualMessage.contains(expectedMessage));
