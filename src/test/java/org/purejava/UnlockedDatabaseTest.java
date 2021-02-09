@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class UnlockedDatabaseTest {
     static final Logger log = LoggerFactory.getLogger(UnlockedDatabaseTest.class);
 
-    KeepassProxyAccess kpa = new KeepassProxyAccess();
+    private KeepassProxyAccess kpa = new KeepassProxyAccess();
 
     @Test
     @Order(3)
@@ -30,7 +30,7 @@ public class UnlockedDatabaseTest {
         kpa.connect();
         kpa.associate();
         assertTrue(null != kpa.getDatabasehash() && !kpa.getDatabasehash().isEmpty());
-        kpa.testAssociate(kpa.getAssociate_id(), kpa.getIdKeyPairPublicKey());
+        kpa.testAssociate(kpa.getAssociateId(), kpa.getIdKeyPairPublicKey());
         log.info("Please allow access to credentials");
         List<Map<String, String>> l = new ArrayList<>();
         l.add(kpa.exportConnection());

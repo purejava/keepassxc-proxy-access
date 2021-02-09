@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * For this test, KeePassXC should be started, but locked.
  */
 public class LockedDatabaseTest {
-    KeepassProxyAccess kpa = new KeepassProxyAccess();
+    private KeepassProxyAccess kpa = new KeepassProxyAccess();
 
     @Test
     @Order(2)

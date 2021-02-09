@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * This test is designed to run within CI, where a KeePassXC database is not available.
  */
 public class KeepassProxyAccessTest {
-    KeepassProxyAccess kpa = new KeepassProxyAccess();
+    private KeepassProxyAccess kpa = new KeepassProxyAccess();
 
     @Test
     @Order(1)

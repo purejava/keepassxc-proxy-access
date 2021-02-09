@@ -130,7 +130,7 @@ public class KeepassProxyAccess {
         return this.connection.getIdKeyPairPublicKey();
     }
 
-    public String getAssociate_id() {
+    public String getAssociateId() {
         return this.connection.getAssociateId();
     }
 }

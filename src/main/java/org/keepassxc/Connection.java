@@ -20,7 +20,6 @@ public abstract class Connection implements AutoCloseable {
     private TweetNaclFast.Box.KeyPair keyPair;
     private TweetNaclFast.Box.KeyPair idKeyPair;
     private String clientID;
-    private Map<String, Object> map;
     private byte[] nonce;
     private String associate_id;
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
