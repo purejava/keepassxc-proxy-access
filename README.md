@@ -5,8 +5,14 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f8c426863d4c46578ef2b7ae8c32e99f)](https://app.codacy.com/gh/purejava/keepassxc-proxy-access?utm_source=github.com&utm_medium=referral&utm_content=purejava/keepassxc-proxy-access&utm_campaign=Badge_Grade)
 [![Maven Central](https://img.shields.io/maven-central/v/org.purejava/keepassxc-proxy-access.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22org.purejava%22%20AND%20a:%22keepassxc-proxy-access%22)
 [![License](https://img.shields.io/github/license/purejava/keepassxc-proxy-access.svg)](https://github.com/purejava/keepassxc-proxy-access/blob/master/LICENSE)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=XVX9ZM7WE4ANL)
 
 A Java library to access KeePassXC via its build-in proxy.
+
+# Donation
+If you like this project, you can give me a cup of coffee :)
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=XVX9ZM7WE4ANL)
 
 # Copyright
 Copyright (C) 2021 Ralph Plawetzki
