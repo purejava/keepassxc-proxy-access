@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * For this test, KeePassXC should be started and unlocked.
  */
 public class UnlockedDatabaseTest {
-    static final Logger log = LoggerFactory.getLogger(UnlockedDatabaseTest.class);
+    private static final Logger log = LoggerFactory.getLogger(UnlockedDatabaseTest.class);
 
     private KeepassProxyAccess kpa = new KeepassProxyAccess();
 

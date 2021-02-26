@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 
 public class LinuxMacConnection extends Connection {
 
-    static final Logger log = LoggerFactory.getLogger(LinuxMacConnection.class);
+    private static final Logger log = LoggerFactory.getLogger(LinuxMacConnection.class);
 
     private AFUNIXSocket socket;
     private OutputStream os;

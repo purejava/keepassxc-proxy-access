@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class WindowsConnection extends Connection {
 
-    static final Logger log = LoggerFactory.getLogger(WindowsConnection.class);
+    private static final Logger log = LoggerFactory.getLogger(WindowsConnection.class);
 
     private RandomAccessFile pipe;
 

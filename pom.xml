@@ -6,7 +6,7 @@
 
   <groupId>org.purejava</groupId>
   <artifactId>keepassxc-proxy-access</artifactId>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <packaging>jar</packaging>
 
   <name>keepassxc-proxy-access</name>
@@ -54,17 +54,10 @@
     <maven.compiler.target>1.9</maven.compiler.target>
   </properties>
 
-  <!-- local repo for tweetnacl-java -->
-  <repositories>
-    <repository>
-      <id>local-repo</id>
-      <url>file://${basedir}/etc/repo</url>
-    </repository>
-  </repositories>
-
+  <!-- tweetnacl-java -->
   <dependencies>
     <dependency>
-      <groupId>com.iwebpp.crypto</groupId>
+      <groupId>org.purejava</groupId>
       <artifactId>tweetnacl-java</artifactId>
       <version>1.1.2</version>
     </dependency>
