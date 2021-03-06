@@ -2,18 +2,19 @@ package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.keepassxc.Connection;
 import org.keepassxc.LinuxMacConnection;
 import org.keepassxc.WindowsConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
 public class KeepassProxyAccess {
+    private static final Logger log = LoggerFactory.getLogger(KeepassProxyAccess.class);
 
     private Connection connection;
 
@@ -26,60 +27,150 @@ public class KeepassProxyAccess {
         }
     }
 
+    // TODO Add Javadoc
+    public Optional<Credentials> loadCredentials() {
+        try (FileInputStream fileIs = new FileInputStream("keepass-proxy-access.dat");
+             ObjectInputStream objIs = new ObjectInputStream(fileIs)) {
+            Credentials c = (Credentials) objIs.readObject();
+            return Optional.of(c);
+        } catch (IOException | ClassNotFoundException e) {
+            log.debug("Credentials could not be read from disc");
+            return Optional.empty();
+        }
+    }
+
+    // TODO Add Javadoc
+    public void saveCredentials(Optional<Credentials> credentials) {
+        if (!credentials.isPresent()) {
+            return;
+        }
+        try (FileOutputStream ops = new FileOutputStream("keepass-proxy-access.dat");
+             ObjectOutputStream objOps = new ObjectOutputStream(ops)) {
+            objOps.writeObject(credentials.get());
+            objOps.flush();
+        } catch (IOException e) {
+            log.error("Credentials could not be saved to disc");
+            log.error(e.toString(), e.getCause());
+        }
+    }
+
     /**
-     * Convenience method to get the connection parameters that are required to re-establish a connection.
+     * Convenience method to get the connection parameters that are required to identify the right KeePassXC database.
      *
-     * @return The agreed associateID and IDKeyPublicKey.
+     * @return The entered associateID and returned IDKeyPublicKey.
      */
     public Map<String, String> exportConnection() {
-        return Map.of("id", this.connection.getAssociateId(),
-                "key", this.connection.getIdKeyPairPublicKey());
+        return Map.of("id", connection.getAssociateId(),
+                "key", connection.getIdKeyPairPublicKey());
     }
 
-    public void connect() throws IOException, KeepassProxyAccessException {
-        this.connection.connect();
+    public boolean connect() {
+        try {
+            connection.connect();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
-    public void associate() throws IOException, KeepassProxyAccessException {
-        this.connection.associate();
+    public boolean changePublicKeys() {
+        try {
+            connection.changePublicKeys();
+            return true;
+        } catch (IOException | KeepassProxyAccessException e) {
+            return false;
+        }
     }
 
-    public void testAssociate(String id, String key) throws IOException, KeepassProxyAccessException {
-        this.connection.testAssociate(id, key);
+    public boolean associate() {
+        try {
+            connection.associate();
+            return true;
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            return false;
+        }
     }
 
-    public String getDatabasehash() throws IOException, KeepassProxyAccessException {
-        return this.connection.getDatabasehash();
+    public boolean connectionAvailable() {
+        return getIdKeyPairPublicKey() != null &&
+                getAssociateId() != null &&
+                testAssociate(getAssociateId(), getIdKeyPairPublicKey());
     }
 
-    public Map<String, Object> getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
-        return this.connection.getLogins(url, submitUrl, httpAuth, list).toMap();
+    public boolean testAssociate(String id, String key) {
+        try {
+            connection.testAssociate(id, key);
+            return true;
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            return false;
+        }
     }
 
-    public Map<String, Object> setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
-        return this.connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid).toMap();
+    public String getDatabasehash() {
+        try {
+            return connection.getDatabasehash();
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            return "";
+        }
     }
 
-    public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
-        return this.connection.getDatabaseGroups();
+    public Map<String, Object> getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) {
+        try {
+            return connection.getLogins(url, submitUrl, httpAuth, list).toMap();
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            return Map.of();
+        }
     }
 
-    public String generatePassword() throws IOException, KeepassProxyAccessException {
-        JSONArray response = this.connection.generatePassword().getJSONArray("entries");
-        return response.getJSONObject(0).getString("password");
+    public boolean setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) {
+        try {
+            JSONObject response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
+            return response.has("success") && response.getString("success").equals("true");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            return false;
+        }
     }
 
-    public boolean lockDatabase() throws IOException, KeepassProxyAccessException {
-        JSONObject response = this.connection.lockDatabase();
-        return response.has("action") && response.getString("action").equals("database-locked");
+    public JSONObject getDatabaseGroups() {
+        try {
+            return connection.getDatabaseGroups();
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            return new JSONObject();
+        }
     }
 
-    public JSONObject createNewGroup(String path) throws IOException, KeepassProxyAccessException {
-        return this.connection.createNewGroup(path);
+    public String generatePassword() {
+        try {
+            JSONArray response = connection.generatePassword().getJSONArray("entries");
+            return response.getJSONObject(0).getString("password");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            return "";
+        }
     }
 
-    public String getTotp(String uuid) throws IOException, KeepassProxyAccessException {
-        return this.connection.getTotp(uuid).getString("totp");
+    public boolean lockDatabase() {
+        try {
+            JSONObject response = connection.lockDatabase();
+            return response.has("action") && response.getString("action").equals("database-locked");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            return false;
+        }
+    }
+
+    public Map<String, String> createNewGroup(String path) {
+        try {
+            return getNewGroupId(connection.createNewGroup(path));
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            return Map.of();
+        }
+    }
+
+    public String getTotp(String uuid) {
+        try {
+            return connection.getTotp(uuid).getString("totp");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            return "";
+        }
     }
 
     /**
@@ -102,6 +193,9 @@ public class KeepassProxyAccess {
      * @return Groups with their according groupUuids.
      */
     public Map<String, String> databaseGroupsToMap(JSONObject groups) {
+        if (groups.isEmpty()) {
+            return Map.of();
+        }
         Map<String, String> groupTree = new HashMap<>();
         Map<String, Object> m = groups.toMap();
         Map<String, Object> n = (HashMap<String, Object>) m.get("groups");
@@ -127,10 +221,10 @@ public class KeepassProxyAccess {
     }
 
     public String getIdKeyPairPublicKey() {
-        return this.connection.getIdKeyPairPublicKey();
+        return connection.getIdKeyPairPublicKey();
     }
 
     public String getAssociateId() {
-        return this.connection.getAssociateId();
+        return connection.getAssociateId();
     }
 }

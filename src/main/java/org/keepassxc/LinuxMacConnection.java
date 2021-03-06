@@ -4,7 +4,6 @@ import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONObject;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
-import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +11,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 
 public class LinuxMacConnection extends Connection {
@@ -33,22 +31,19 @@ public class LinuxMacConnection extends Connection {
      * Connect to the KeePassXC proxy via a Unix Domain Sockets (AF_UNIX)
      * the proxy has opened.
      *
-     * @throws IOException                 Connecting to the proxy failed due to technical reasons or the proxy wasn't started.
-     * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
+     * @throws IOException Connecting to the proxy failed due to technical reasons or the proxy wasn't started.
      */
     @Override
-    public void connect() throws IOException, KeepassProxyAccessException {
+    public void connect() throws IOException {
         try {
             socket = AFUNIXSocket.newInstance();
             socket.connect(new AFUNIXSocketAddress(socketFile));
             os = socket.getOutputStream();
             is = socket.getInputStream();
-        } catch (SocketException e) {
+        } catch (IOException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
         }
-
-        changePublibKeys();
     }
 
     @Override

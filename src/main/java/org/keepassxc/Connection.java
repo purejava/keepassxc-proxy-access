@@ -3,6 +3,7 @@ package org.keepassxc;
 import com.iwebpp.crypto.TweetNaclFast;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.purejava.Credentials;
 import org.purejava.KeepassProxyAccessException;
 
 import java.io.IOException;
@@ -17,22 +18,22 @@ import java.util.*;
 public abstract class Connection implements AutoCloseable {
 
     private TweetNaclFast.Box box;
-    private TweetNaclFast.Box.KeyPair keyPair;
-    private TweetNaclFast.Box.KeyPair idKeyPair;
+    private Optional<Credentials> credentials;
     private String clientID;
     private byte[] nonce;
-    private String associate_id;
+
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
+    private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged first. Call changePublicKeys().";
 
     public Connection() {
-        keyPair = TweetNaclFast.Box.keyPair();
         byte[] array = new byte[24];
         new Random().nextBytes(array);
         clientID = b64encode(array);
         nonce = TweetNaclFast.randombytes(24);
+        credentials = Optional.empty();
     }
 
-    public abstract void connect() throws IOException, KeepassProxyAccessException;
+    public abstract void connect() throws IOException;
 
     /**
      * Send an unencrypted message to the proxy.
@@ -57,10 +58,17 @@ public abstract class Connection implements AutoCloseable {
      * The proxy accepts messages in the JSON data format.
      *
      * @param msg The message to be sent. The key "action" describes the request to the proxy.
-     * @throws IOException Sending failed due to technical reasons.
+     * @throws IllegalStateException Connection was not initialized before.
+     * @throws IOException           Sending failed due to technical reasons.
      */
     private void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
+        byte[] publicKey = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getServerPublicKey();
+        TweetNaclFast.Box.KeyPair keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
+
         String strMsg = jsonTxt(msg);
+
+        box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
+
         String encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
 
         sendCleartextMessage(jsonTxt(Map.of(
@@ -69,6 +77,7 @@ public abstract class Connection implements AutoCloseable {
                 "nonce", b64encode(nonce),
                 "clientID", clientID
         )));
+
         incrementNonce();
 
     }
@@ -111,7 +120,9 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException                 Connection to the proxy failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
      */
-    protected void changePublibKeys() throws IOException, KeepassProxyAccessException {
+    public void changePublicKeys() throws IOException, KeepassProxyAccessException {
+        TweetNaclFast.Box.KeyPair keyPair = TweetNaclFast.Box.keyPair();
+
         // Send change-public-keys request
         sendCleartextMessage(jsonTxt(Map.of(
                 "action", "change-public-keys",
@@ -125,8 +136,15 @@ public abstract class Connection implements AutoCloseable {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
-        // Store box for further communication
-        box = new TweetNaclFast.Box(b64decode(response.getString("publicKey").getBytes()), keyPair.getSecretKey());
+        byte[] publicKey = b64decode(response.getString("publicKey").getBytes());
+        box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
+
+        // Create Credentials for further connections
+        Credentials credentials = new Credentials();
+        credentials.setOwnKeypair(keyPair);
+        credentials.setServerPublicKey(publicKey);
+        setCredentials(Optional.of(credentials));
+
         incrementNonce();
 
     }
@@ -134,11 +152,13 @@ public abstract class Connection implements AutoCloseable {
     /**
      * Connects KeePassXC with a new client.
      *
+     * @throws IllegalStateException       Connection was not initialized before.
      * @throws IOException                 Connecting KeePassXC with a new client failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to associate KeePassXC with a new client.
      */
     public void associate() throws IOException, KeepassProxyAccessException {
-        idKeyPair = TweetNaclFast.Box.keyPair();
+        TweetNaclFast.Box.KeyPair idKeyPair = TweetNaclFast.Box.keyPair();
+        TweetNaclFast.Box.KeyPair keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
 
         // Send associate request
         sendEncryptedMessage(Map.of(
@@ -148,7 +168,8 @@ public abstract class Connection implements AutoCloseable {
         ));
         JSONObject response = getEncryptedResponseAndDecrypt();
 
-        associate_id = response.getString("id");
+        credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setAssociate_id(response.getString("id"));
+        credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setIdKeyPublicKey(idKeyPair.getPublicKey());
     }
 
     /**
@@ -389,15 +410,18 @@ public abstract class Connection implements AutoCloseable {
         return null == param ? "" : param;
     }
 
-    // Getters
+    // Getters and Setters
     public String getIdKeyPairPublicKey() {
-        return null == idKeyPair ? null : b64encode(idKeyPair.getPublicKey());
+        return credentials.map(value -> b64encode(value.getIdKeyPublicKey())).orElse(null);
     }
 
     public String getAssociateId() {
-        return associate_id;
+        return credentials.map(Credentials::getAssociate_id).orElse(null);
     }
 
-    @Override
+    public void setCredentials(Optional<Credentials> credentials) {
+        this.credentials = credentials;
+    }
+
     public abstract void close() throws Exception;
 }
