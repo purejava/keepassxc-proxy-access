@@ -6,6 +6,8 @@ import org.json.JSONObject;
 import org.purejava.Credentials;
 import org.purejava.KeepassProxyAccessException;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +18,8 @@ import java.util.*;
  * .connect() and .associate() need to ba called to create the connection.
  */
 public abstract class Connection implements AutoCloseable {
+
+    private PropertyChangeSupport support;
 
     private TweetNaclFast.Box box;
     private Optional<Credentials> credentials;
@@ -31,6 +35,15 @@ public abstract class Connection implements AutoCloseable {
         clientID = b64encode(array);
         nonce = TweetNaclFast.randombytes(24);
         credentials = Optional.empty();
+        support = new PropertyChangeSupport(this);
+    }
+
+    public void addPropertyChangeListener(PropertyChangeListener pcl) {
+        support.addPropertyChangeListener(pcl);
+    }
+
+    public void removePropertyChangeListener(PropertyChangeListener pcl) {
+        support.removePropertyChangeListener(pcl);
     }
 
     public abstract void connect() throws IOException;
@@ -143,7 +156,9 @@ public abstract class Connection implements AutoCloseable {
         Credentials credentials = new Credentials();
         credentials.setOwnKeypair(keyPair);
         credentials.setServerPublicKey(publicKey);
-        setCredentials(Optional.of(credentials));
+        Optional<Credentials> optional = Optional.of(credentials);
+        setCredentials(optional);
+        support.firePropertyChange("credentialsCreated", null, optional);
 
         incrementNonce();
 
@@ -170,6 +185,7 @@ public abstract class Connection implements AutoCloseable {
 
         credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setAssociateId(response.getString("id"));
         credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setIdKeyPublicKey(idKeyPair.getPublicKey());
+        support.firePropertyChange("associated", null, credentials);
     }
 
     /**

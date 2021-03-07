@@ -10,26 +10,53 @@ import org.keepassxc.WindowsConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class KeepassProxyAccess {
+public class KeepassProxyAccess implements PropertyChangeListener {
     private static final Logger log = LoggerFactory.getLogger(KeepassProxyAccess.class);
 
     private Connection connection;
+    private String fileLocation;
+    private final String FILE_NAME = "keepass-proxy-access.dat";
+    private final long SAVE_DELAY_MS = 1000;
+    private final AtomicReference<ScheduledFuture<?>> scheduledSaveCmd = new AtomicReference<>();
+    private final ScheduledExecutorService scheduler;
 
     public KeepassProxyAccess() {
         if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX) {
             connection = new LinuxMacConnection();
+            fileLocation = System.getProperty("user.home");
+            if (SystemUtils.IS_OS_LINUX) {
+                fileLocation += "/.config/keepass-proxy-access/" + FILE_NAME;
+            }
+            if (SystemUtils.IS_OS_MAC_OSX) {
+                fileLocation += "/Library/Application Support/keepass-proxy-access/" + FILE_NAME;
+            }
         }
         if (SystemUtils.IS_OS_WINDOWS) {
             connection = new WindowsConnection();
+            fileLocation = System.getenv("AppData") + "keepass-proxy-access/" + FILE_NAME;
         }
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        connection.addPropertyChangeListener(this);
+        scheduleSave(loadCredentials());
     }
 
     // TODO Add Javadoc
-    public Optional<Credentials> loadCredentials() {
-        try (FileInputStream fileIs = new FileInputStream("keepass-proxy-access.dat");
+    private Optional<Credentials> loadCredentials() {
+        try (FileInputStream fileIs = new FileInputStream(fileLocation);
              ObjectInputStream objIs = new ObjectInputStream(fileIs)) {
             Credentials c = (Credentials) objIs.readObject();
             return Optional.of(c);
@@ -40,14 +67,33 @@ public class KeepassProxyAccess {
     }
 
     // TODO Add Javadoc
-    public void saveCredentials(Optional<Credentials> credentials) {
-        if (!credentials.isPresent()) {
+    private void scheduleSave(Optional<Credentials> credentials) {
+        if (credentials.isEmpty()) {
+            log.debug("Credentials are not present and won't be saved");
             return;
         }
-        try (FileOutputStream ops = new FileOutputStream("keepass-proxy-access.dat");
-             ObjectOutputStream objOps = new ObjectOutputStream(ops)) {
-            objOps.writeObject(credentials.get());
-            objOps.flush();
+        Runnable saveCommand = () -> this.saveCredentials(credentials);
+        ScheduledFuture<?> scheduledTask = scheduler.schedule(saveCommand, SAVE_DELAY_MS, TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> previouslyScheduledTask = scheduledSaveCmd.getAndSet(scheduledTask);
+        if (previouslyScheduledTask != null) {
+            previouslyScheduledTask.cancel(false);
+        }
+    }
+
+    // TODO Add Javadoc
+    private void saveCredentials(Optional<Credentials> credentials) {
+        log.debug("Attempting to save credentials");
+        try {
+            Path path = Path.of(fileLocation);
+            Files.createDirectories(path.getParent());
+            Path tmpPath = path.resolveSibling(path.getFileName().toString() + ".tmp");
+            try (OutputStream ops = Files.newOutputStream(tmpPath, StandardOpenOption.CREATE_NEW);
+                 ObjectOutputStream objOps = new ObjectOutputStream(ops)) {
+                objOps.writeObject(credentials.get());
+                objOps.flush();
+            }
+            Files.move(tmpPath, path, StandardCopyOption.REPLACE_EXISTING);
+            log.debug("Credentials saved");
         } catch (IOException e) {
             log.error("Credentials could not be saved to disc");
             log.error(e.toString(), e.getCause());
@@ -218,6 +264,11 @@ public class KeepassProxyAccess {
                         traverse(alc, groups);
                     }
                 });
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent event) {
+        scheduleSave((Optional<Credentials>) event.getNewValue());
     }
 
     public String getIdKeyPairPublicKey() {
