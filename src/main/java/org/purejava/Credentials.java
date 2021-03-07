@@ -14,7 +14,7 @@ public class Credentials implements Serializable {
 
     private byte[] serverPublicKey;
 
-    private String associate_id;
+    private String associateId;
     private byte[] idKeyPublicKey;
 
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
@@ -45,12 +45,12 @@ public class Credentials implements Serializable {
         this.serverPublicKey = serverPublicKey;
     }
 
-    public String getAssociate_id() {
-        return associate_id;
+    public String getAssociateId() {
+        return associateId;
     }
 
-    public void setAssociate_id(String associate_id) {
-        this.associate_id = associate_id;
+    public void setAssociateId(String associateId) {
+        this.associateId = associateId;
     }
 
     public byte[] getIdKeyPublicKey() {

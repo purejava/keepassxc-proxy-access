@@ -168,7 +168,7 @@ public abstract class Connection implements AutoCloseable {
         ));
         JSONObject response = getEncryptedResponseAndDecrypt();
 
-        credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setAssociate_id(response.getString("id"));
+        credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setAssociateId(response.getString("id"));
         credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setIdKeyPublicKey(idKeyPair.getPublicKey());
     }
 
@@ -416,7 +416,7 @@ public abstract class Connection implements AutoCloseable {
     }
 
     public String getAssociateId() {
-        return credentials.map(Credentials::getAssociate_id).orElse(null);
+        return credentials.map(Credentials::getAssociateId).orElse(null);
     }
 
     public void setCredentials(Optional<Credentials> credentials) {
