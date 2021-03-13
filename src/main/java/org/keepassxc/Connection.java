@@ -15,7 +15,7 @@ import java.util.*;
 
 /**
  * Establishes a connection to KeePassXC via its build-in proxy.
- * .connect() and .associate() need to ba called to create the connection.
+ * .connect(), changePublicKeys() and .associate() need to ba called to create the connection.
  */
 public abstract class Connection implements AutoCloseable {
 
