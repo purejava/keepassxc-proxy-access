@@ -428,11 +428,11 @@ public abstract class Connection implements AutoCloseable {
 
     // Getters and Setters
     public String getIdKeyPairPublicKey() {
-        return credentials.map(value -> b64encode(value.getIdKeyPublicKey())).orElse(null);
+        return credentials.map(value -> b64encode(value.getIdKeyPublicKey())).orElse("");
     }
 
     public String getAssociateId() {
-        return credentials.map(Credentials::getAssociateId).orElse(null);
+        return credentials.map(Credentials::getAssociateId).orElse("");
     }
 
     public void setCredentials(Optional<Credentials> credentials) {

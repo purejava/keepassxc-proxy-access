@@ -139,7 +139,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     public boolean connectionAvailable() {
         return getIdKeyPairPublicKey() != null &&
+               !getIdKeyPairPublicKey().isEmpty() &&
                 getAssociateId() != null &&
+                !getAssociateId().isEmpty() &&
                 testAssociate(getAssociateId(), getIdKeyPairPublicKey());
     }
 
