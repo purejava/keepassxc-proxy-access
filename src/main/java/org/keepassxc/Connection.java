@@ -15,7 +15,7 @@ import java.util.*;
 
 /**
  * Establishes a connection to KeePassXC via its build-in proxy.
- * .connect(), changePublicKeys() and .associate() need to ba called to create the connection.
+ * .connect() and .associate() need to ba called to create the connection.
  */
 public abstract class Connection implements AutoCloseable {
 
@@ -28,6 +28,7 @@ public abstract class Connection implements AutoCloseable {
 
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
     private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged first. Call changePublicKeys().";
+    private final String MISSING_CLASS = "Credentials have not been initialized";
 
     public Connection() {
         byte[] array = new byte[24];
@@ -133,7 +134,7 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException                 Connection to the proxy failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
      */
-    public void changePublicKeys() throws IOException, KeepassProxyAccessException {
+    protected void changePublicKeys() throws IOException, KeepassProxyAccessException {
         TweetNaclFast.Box.KeyPair keyPair = TweetNaclFast.Box.keyPair();
 
         // Send change-public-keys request
@@ -152,13 +153,12 @@ public abstract class Connection implements AutoCloseable {
         byte[] publicKey = b64decode(response.getString("publicKey").getBytes());
         box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
 
-        // Create Credentials for further connections
-        Credentials credentials = new Credentials();
-        credentials.setOwnKeypair(keyPair);
-        credentials.setServerPublicKey(publicKey);
-        Optional<Credentials> optional = Optional.of(credentials);
-        setCredentials(optional);
-        support.firePropertyChange("credentialsCreated", null, optional);
+        if (credentials.isEmpty()) {
+            setCredentials(Optional.of(new Credentials()));
+        }
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setOwnKeypair(keyPair);
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setServerPublicKey(publicKey);
+        support.firePropertyChange("credentialsCreated", null, credentials);
 
         incrementNonce();
 
@@ -183,8 +183,8 @@ public abstract class Connection implements AutoCloseable {
         ));
         JSONObject response = getEncryptedResponseAndDecrypt();
 
-        credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setAssociateId(response.getString("id"));
-        credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).setIdKeyPublicKey(idKeyPair.getPublicKey());
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
         support.firePropertyChange("associated", null, credentials);
     }
 

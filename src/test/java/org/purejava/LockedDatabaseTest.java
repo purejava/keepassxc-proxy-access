@@ -18,7 +18,6 @@ public class LockedDatabaseTest {
     @DisplayName("Testing connection over socket to KeePassXC")
     public void shouldHaveNoErrors() {
         assertTrue(kpa.connect());
-        assertTrue(kpa.changePublicKeys());
         assertFalse(kpa.associate());
     }
 }

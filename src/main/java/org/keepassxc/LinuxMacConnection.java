@@ -4,6 +4,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONObject;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
+import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,11 @@ public class LinuxMacConnection extends Connection {
         } catch (IOException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
+        }
+        try {
+            changePublicKeys();
+        } catch (KeepassProxyAccessException e) {
+            log.error(e.toString(), e.getCause());
         }
     }
 

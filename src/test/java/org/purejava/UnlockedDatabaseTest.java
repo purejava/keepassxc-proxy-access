@@ -27,7 +27,6 @@ public class UnlockedDatabaseTest {
     public void shouldHaveNoErrors() {
         log.info("Please enter a name for the connection in the pop-up");
         assertTrue(kpa.connect());
-        assertTrue(kpa.changePublicKeys());
         assertTrue(kpa.associate());
         assertTrue(null != kpa.getDatabasehash() && !kpa.getDatabasehash().isEmpty());
         assertTrue(kpa.testAssociate(kpa.getAssociateId(), kpa.getIdKeyPairPublicKey()));
