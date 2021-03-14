@@ -2,10 +2,8 @@ package org.purejava;
 
 import com.iwebpp.crypto.TweetNaclFast;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.*;
+import java.util.Optional;
 
 // TODO Add Javadoc
 public class Credentials implements Serializable {
@@ -14,17 +12,31 @@ public class Credentials implements Serializable {
 
     private byte[] serverPublicKey;
 
-    private String associateId;
-    private byte[] idKeyPublicKey;
+    private transient Optional<String> associateId;
+    private String aID;
 
+    private transient Optional<byte[]> idKeyPublicKey;
+    private byte[] idKeyPub;
+
+    public Credentials() {
+        this.associateId = Optional.empty();
+        this.idKeyPublicKey = Optional.empty();
+    }
+
+    @Serial
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
         ois.defaultReadObject();
         ownKeypair = TweetNaclFast.Box.keyPair_fromSecretKey(secretKey);
+        setAssociateId(aID);
+        setIdKeyPublicKey(idKeyPub);
 
     }
 
+    @Serial
     private void writeObject(ObjectOutputStream oos) throws IOException {
         secretKey = ownKeypair.getSecretKey();
+        aID = getAssociateId();
+        idKeyPub = getIdKeyPublicKey();
         oos.defaultWriteObject();
     }
 
@@ -46,18 +58,26 @@ public class Credentials implements Serializable {
     }
 
     public String getAssociateId() {
-        return associateId;
+        return associateId.isEmpty() ? "" : associateId.get();
     }
 
     public void setAssociateId(String associateId) {
-        this.associateId = associateId;
+        if (associateId.isEmpty()) {
+            this.associateId = Optional.empty();
+        } else {
+            this.associateId = Optional.of(associateId);
+        }
     }
 
     public byte[] getIdKeyPublicKey() {
-        return idKeyPublicKey;
+        return idKeyPublicKey.isEmpty() ? new byte[]{} : idKeyPublicKey.get();
     }
 
     public void setIdKeyPublicKey(byte[] idKeyPublicKey) {
-        this.idKeyPublicKey = idKeyPublicKey;
+        if (idKeyPublicKey.length == 0) {
+            this.idKeyPublicKey = Optional.empty();
+        } else {
+            this.idKeyPublicKey = Optional.of(idKeyPublicKey);
+        }
     }
 }
