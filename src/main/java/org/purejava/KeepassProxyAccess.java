@@ -51,7 +51,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
         scheduler = Executors.newSingleThreadScheduledExecutor();
         connection.addPropertyChangeListener(this);
-        scheduleSave(loadCredentials());
+        connection.setCredentials(loadCredentials());
     }
 
     // TODO Add Javadoc
@@ -124,6 +124,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.changePublicKeys();
             return true;
         } catch (IOException | KeepassProxyAccessException e) {
+            log.debug(e.toString(), e.getCause());
             return false;
         }
     }
@@ -133,6 +134,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.associate();
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.debug(e.toString(), e.getCause());
             return false;
         }
     }
@@ -150,6 +152,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.testAssociate(id, key);
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.debug(e.toString(), e.getCause());
             return false;
         }
     }
@@ -158,6 +161,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getDatabasehash();
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.debug(e.toString(), e.getCause());
             return "";
         }
     }
@@ -166,6 +170,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getLogins(url, submitUrl, httpAuth, list).toMap();
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.debug(e.toString(), e.getCause());
             return Map.of();
         }
     }
@@ -175,6 +180,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             JSONObject response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
             return response.has("success") && response.getString("success").equals("true");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.debug(e.toString(), e.getCause());
             return false;
         }
     }
@@ -183,6 +189,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getDatabaseGroups();
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.debug(e.toString(), e.getCause());
             return new JSONObject();
         }
     }
@@ -192,6 +199,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             JSONArray response = connection.generatePassword().getJSONArray("entries");
             return response.getJSONObject(0).getString("password");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.debug(e.toString(), e.getCause());
             return "";
         }
     }
@@ -201,6 +209,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             JSONObject response = connection.lockDatabase();
             return response.has("action") && response.getString("action").equals("database-locked");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.debug(e.toString(), e.getCause());
             return false;
         }
     }
@@ -209,6 +218,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return getNewGroupId(connection.createNewGroup(path));
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.debug(e.toString(), e.getCause());
             return Map.of();
         }
     }
@@ -217,6 +227,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getTotp(uuid).getString("totp");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.debug(e.toString(), e.getCause());
             return "";
         }
     }
