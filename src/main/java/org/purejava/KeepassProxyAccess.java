@@ -78,6 +78,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         if (previouslyScheduledTask != null) {
             previouslyScheduledTask.cancel(false);
         }
+        scheduler.shutdown();
     }
 
     // TODO Add Javadoc

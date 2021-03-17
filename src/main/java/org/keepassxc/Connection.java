@@ -439,5 +439,6 @@ public abstract class Connection implements AutoCloseable {
         this.credentials = credentials;
     }
 
+    @Override
     public abstract void close() throws Exception;
 }
