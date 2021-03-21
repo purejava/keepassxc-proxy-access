@@ -166,6 +166,19 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
+    public boolean loginExists(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list, String password) {
+        Map<String, Object> response = getLogins(url, submitUrl, httpAuth, list);
+        if (response.isEmpty()) {
+            return false;
+        }
+        List<Object> array = (ArrayList<Object>) response.get("entries");
+        for (Object o : array) {
+            Map<String, Object> credentials = (HashMap<String, Object>) o;
+            if (credentials.get("password").equals(password)) return true;
+        }
+        return false;
+    }
+
     public boolean setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) {
         try {
             JSONObject response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
