@@ -5,6 +5,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.purejava.Credentials;
 import org.purejava.KeepassProxyAccessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -19,6 +21,7 @@ import java.util.*;
  */
 public abstract class Connection implements AutoCloseable {
 
+    private static final Logger log = LoggerFactory.getLogger(Connection.class);
     private PropertyChangeSupport support;
 
     private TweetNaclFast.Box box;
@@ -80,6 +83,7 @@ public abstract class Connection implements AutoCloseable {
         TweetNaclFast.Box.KeyPair keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
 
         String strMsg = jsonTxt(msg);
+        log.trace("Send - encrypting the following message: {}", strMsg);
 
         box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
 
@@ -128,6 +132,7 @@ public abstract class Connection implements AutoCloseable {
         }
 
         String decrypted = new String(bMessage, StandardCharsets.UTF_8);
+        log.trace("Decrypted message: {}", decrypted);
         JSONObject decryptedResponse = new JSONObject(decrypted);
 
         if (!decryptedResponse.has("success")) {

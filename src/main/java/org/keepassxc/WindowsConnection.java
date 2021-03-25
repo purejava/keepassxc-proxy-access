@@ -39,6 +39,7 @@ public class WindowsConnection extends Connection {
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
+        log.trace("Sending message: {}", msg);
         pipe.write(msg.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -50,6 +51,7 @@ public class WindowsConnection extends Connection {
             c = pipe.read();
             raw += (char) c;
         } while (c != 125); // end of transmission
+        log.trace("Reading message: {}", raw);
         return new JSONObject(raw);
     }
 

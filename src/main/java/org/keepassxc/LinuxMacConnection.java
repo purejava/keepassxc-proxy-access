@@ -54,6 +54,7 @@ public class LinuxMacConnection extends Connection {
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
+        log.trace("Sending message: {}", msg);
         os.write(msg.getBytes(StandardCharsets.UTF_8));
         os.flush();
     }
@@ -66,6 +67,7 @@ public class LinuxMacConnection extends Connection {
             c = is.read();
             raw += (char) c;
         } while (c != 125); // end of transmission
+        log.trace("Reading message: {}", raw);
         return new JSONObject(raw);
     }
 
