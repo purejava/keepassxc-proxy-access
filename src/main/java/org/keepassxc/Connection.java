@@ -111,17 +111,17 @@ public abstract class Connection implements AutoCloseable {
     private JSONObject getEncryptedResponseAndDecrypt() throws IOException, KeepassProxyAccessException {
         JSONObject response = getCleartextResponse();
 
+        // Handle signals
+        while (!response.has("error")
+                && response.has("action") && response.getString("action").equals("database-locked")
+                || response.has("action") && response.getString("action").equals("database-unlocked")) {
+            String action = response.getString("action");
+            log.info("Received signal {}", action);
+            response = getCleartextResponse();
+        }
+
         if (response.has("error")) {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
-        }
-
-        // Handle signals
-        if (response.has("action") && response.getString("action").equals("database-locked")) {
-            return response;
-        }
-
-        if (response.has("action") && response.getString("action").equals("database-unlocked")) {
-            throw new KeepassProxyAccessException("Received signal database-unlocked");
         }
 
         byte[] serverNonce = b64decode(response.getString("nonce").getBytes());

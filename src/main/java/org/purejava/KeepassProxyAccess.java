@@ -211,7 +211,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     public boolean lockDatabase() {
         try {
             JSONObject response = connection.lockDatabase();
-            return response.has("action") && response.getString("action").equals("database-locked");
+            return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
             log.info(e.toString(), e.getCause());
             return false;
