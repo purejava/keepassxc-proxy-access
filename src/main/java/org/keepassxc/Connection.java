@@ -2,6 +2,7 @@ package org.keepassxc;
 
 import com.iwebpp.crypto.TweetNaclFast;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.purejava.Credentials;
 import org.purejava.KeepassProxyAccessException;
@@ -104,20 +105,29 @@ public abstract class Connection implements AutoCloseable {
      * Receive an encrypted message from the proxy.
      * The proxy sends messages in the JSON data format.
      *
+     * @param action The original request that was send to the proxy.
      * @return The received message.
      * @throws IOException                 Retrieving failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
-    private JSONObject getEncryptedResponseAndDecrypt() throws IOException, KeepassProxyAccessException {
+    private JSONObject getEncryptedResponseAndDecrypt(String action) throws IOException, KeepassProxyAccessException {
         JSONObject response = getCleartextResponse();
 
         // Handle signals
-        while (!response.has("error")
-                && response.has("action") && response.getString("action").equals("database-locked")
-                || response.has("action") && response.getString("action").equals("database-unlocked")) {
-            String action = response.getString("action");
-            log.info("Received signal {}", action);
+        while (!response.has("error") && isSignal(response)) {
+            log.info("Received signal {}", response.getString("action"));
             response = getCleartextResponse();
+            log.debug("Reading message: {}", response.toString());
+        }
+
+        // Reading further messages from queue
+        while (response.has("action") && !response.getString("action").equals(action)) {
+            response = getCleartextResponse();
+            if (isSignal(response)) {
+                log.info("Received signal {}", response.getString("action"));
+            } else {
+                log.debug("Reading message: {}", response.toString());
+            }
         }
 
         if (response.has("error")) {
@@ -140,6 +150,15 @@ public abstract class Connection implements AutoCloseable {
         }
 
         return decryptedResponse;
+    }
+
+    private boolean isSignal(JSONObject response) {
+        try {
+            return response.has("action") && response.getString("action").equals("database-locked")
+                    || response.has("action") && response.getString("action").equals("database-unlocked");
+        } catch (JSONException je) {
+            return false;
+        }
     }
 
     /**
@@ -195,7 +214,7 @@ public abstract class Connection implements AutoCloseable {
                 "key", b64encode(keyPair.getPublicKey()),
                 "idKey", b64encode(idKeyPair.getPublicKey())
         ));
-        JSONObject response = getEncryptedResponseAndDecrypt();
+        JSONObject response = getEncryptedResponseAndDecrypt("associate");
 
         credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
         credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
@@ -212,7 +231,7 @@ public abstract class Connection implements AutoCloseable {
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request
         sendEncryptedMessage(Map.of("action", "get-databasehash"));
-        JSONObject response = getEncryptedResponseAndDecrypt();
+        JSONObject response = getEncryptedResponseAndDecrypt("get-databasehash");
 
         return response.getString("hash");
     }
@@ -233,7 +252,7 @@ public abstract class Connection implements AutoCloseable {
                 "id", id,
                 "key", key
         ));
-        getEncryptedResponseAndDecrypt();
+        getEncryptedResponseAndDecrypt("test-associate");
 
     }
 
@@ -267,7 +286,7 @@ public abstract class Connection implements AutoCloseable {
                 "httpAuth", httpAuth,
                 "keys", array
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("get-logins");
 
     }
 
@@ -304,7 +323,7 @@ public abstract class Connection implements AutoCloseable {
                 "groupUuid", ensureNotNull(groupUuid),
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("set-login");
 
     }
 
@@ -318,7 +337,7 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
         // Send get-database-groups
         sendEncryptedMessage(Map.of("action", "get-database-groups"));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("get-database-groups");
 
     }
 
@@ -336,7 +355,7 @@ public abstract class Connection implements AutoCloseable {
                 "nonce", b64encode(nonce),
                 "clientID", clientID
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("generate-password");
 
     }
 
@@ -350,7 +369,7 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject lockDatabase() throws IOException, KeepassProxyAccessException {
         // Send lock-database request
         sendEncryptedMessage(Map.of("action", "lock-database"));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("lock-database");
 
     }
 
@@ -370,7 +389,7 @@ public abstract class Connection implements AutoCloseable {
                 "action", "create-new-group",
                 "groupName", ensureNotNull(path)
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("create-new-group");
 
     }
 
@@ -389,7 +408,7 @@ public abstract class Connection implements AutoCloseable {
                 "action", "get-totp",
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("get-totp");
 
     }
 
