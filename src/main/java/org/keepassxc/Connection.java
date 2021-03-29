@@ -117,7 +117,6 @@ public abstract class Connection implements AutoCloseable {
         while (!response.has("error") && isSignal(response)) {
             log.info("Received signal {}", response.getString("action"));
             response = getCleartextResponse();
-            log.debug("Reading message: {}", response.toString());
         }
 
         // Reading further messages from queue
@@ -125,8 +124,6 @@ public abstract class Connection implements AutoCloseable {
             response = getCleartextResponse();
             if (isSignal(response)) {
                 log.info("Received signal {}", response.getString("action"));
-            } else {
-                log.debug("Reading message: {}", response.toString());
             }
         }
 
