@@ -31,7 +31,8 @@ public abstract class Connection implements AutoCloseable {
     private byte[] nonce;
 
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
-    private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged first. Call changePublicKeys().";
+    private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
+    private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
     private final String MISSING_CLASS = "Credentials have not been initialized";
 
     public Connection() {
@@ -80,6 +81,10 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException           Sending failed due to technical reasons.
      */
     private void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
+        if (!isConnected()) {
+            throw new IllegalStateException(NOT_CONNECTED);
+        }
+
         byte[] publicKey = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getServerPublicKey();
         TweetNaclFast.Box.KeyPair keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
 
@@ -165,6 +170,10 @@ public abstract class Connection implements AutoCloseable {
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
      */
     protected void changePublicKeys() throws IOException, KeepassProxyAccessException {
+        if (!isConnected()) {
+            throw new IllegalStateException(NOT_CONNECTED);
+        }
+
         TweetNaclFast.Box.KeyPair keyPair = TweetNaclFast.Box.keyPair();
 
         // Send change-public-keys request
@@ -468,6 +477,8 @@ public abstract class Connection implements AutoCloseable {
     public void setCredentials(Optional<Credentials> credentials) {
         this.credentials = credentials;
     }
+
+    protected abstract boolean isConnected();
 
     @Override
     public abstract void close() throws Exception;

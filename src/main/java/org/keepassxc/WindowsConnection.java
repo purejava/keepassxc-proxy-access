@@ -56,6 +56,11 @@ public class WindowsConnection extends Connection {
     }
 
     @Override
+    protected boolean isConnected() {
+        return null != pipe;
+    }
+
+    @Override
     public void close() throws Exception {
         pipe.close();
     }

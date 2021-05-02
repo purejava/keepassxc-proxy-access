@@ -91,6 +91,11 @@ public class LinuxMacConnection extends Connection {
     }
 
     @Override
+    protected boolean isConnected() {
+        return null != os;
+    }
+
+    @Override
     public void close() throws Exception {
         is.close();
         os.close();
