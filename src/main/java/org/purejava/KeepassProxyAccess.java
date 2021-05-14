@@ -148,9 +148,16 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
-    public String getDatabasehash() {
+    public String getDatabasehash(boolean... unlock) {
         try {
-            return connection.getDatabasehash();
+            if (unlock.length > 1) {
+                throw new IllegalStateException("Invalid number of parameters for getDatabasehash(boolean... unlock)");
+            }
+            return switch (unlock.length) {
+                case 0 -> connection.getDatabasehash();
+                case 1 -> connection.getDatabasehash(unlock[0]);
+                default -> "";
+            };
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
             log.info(e.toString(), e.getCause());
             return "";

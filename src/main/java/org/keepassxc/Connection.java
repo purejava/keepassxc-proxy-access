@@ -81,12 +81,19 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException           Sending failed due to technical reasons.
      */
     private void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
+        boolean unlockRequested = false;
+
         if (!isConnected()) {
             throw new IllegalStateException(NOT_CONNECTED);
         }
 
         byte[] publicKey = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getServerPublicKey();
         TweetNaclFast.Box.KeyPair keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
+
+        if (msg.containsKey("triggerUnlock") && msg.get("triggerUnlock").equals("true")) {
+            msg.remove("triggerUnlock");
+            unlockRequested = true;
+        }
 
         String strMsg = jsonTxt(msg);
         log.trace("Send - encrypting the following message: {}", strMsg);
@@ -95,12 +102,17 @@ public abstract class Connection implements AutoCloseable {
 
         String encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
 
-        sendCleartextMessage(jsonTxt(Map.of(
-                "action", msg.get("action").toString(),
-                "message", encrypted,
-                "nonce", b64encode(nonce),
-                "clientID", clientID
-        )));
+        // Map.of can't be used here, because we need a mutable object
+        Map<String, Object> message = new HashMap<>();
+        message.put("action", msg.get("action").toString());
+        message.put("message", encrypted);
+        message.put("nonce", b64encode(nonce));
+        message.put("clientID", clientID);
+
+        if (unlockRequested) {
+            message.put("triggerUnlock", "true");
+        }
+        sendCleartextMessage(jsonTxt(message));
 
         incrementNonce();
 
@@ -237,6 +249,26 @@ public abstract class Connection implements AutoCloseable {
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request
         sendEncryptedMessage(Map.of("action", "get-databasehash"));
+        JSONObject response = getEncryptedResponseAndDecrypt("get-databasehash");
+
+        return response.getString("hash");
+    }
+
+    /**
+     * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
+     * Sent together with a request to unlock the KeePassXC database.
+     *
+     * @param triggerUnlock When true, the KeePassXC application is brought to the front and unlock is requested from the user.
+     * @return The database hash of the current active KeePassXC database.
+     * @throws IOException                 Retrieving the hash failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to get the hash.
+     */
+    public String getDatabasehash(boolean triggerUnlock) throws IOException, KeepassProxyAccessException {
+        // Send get-databasehash request with triggerUnlock, if needed
+        Map<String, Object> map = new HashMap<>(); // Map.of can't be used here, because we need a mutable object
+        map.put("action", "get-databasehash");
+        map.put("triggerUnlock", Boolean.toString(triggerUnlock));
+        sendEncryptedMessage(map);
         JSONObject response = getEncryptedResponseAndDecrypt("get-databasehash");
 
         return response.getString("hash");
