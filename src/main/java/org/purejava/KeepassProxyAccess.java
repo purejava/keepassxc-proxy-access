@@ -66,6 +66,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
+
+
     // TODO Add Javadoc
     private void scheduleSave(Optional<Credentials> credentials) {
         if (credentials.isEmpty()) {
@@ -78,7 +80,6 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         if (previouslyScheduledTask != null) {
             previouslyScheduledTask.cancel(false);
         }
-        scheduler.shutdown();
     }
 
     // TODO Add Javadoc
@@ -302,4 +303,6 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     public String getAssociateId() {
         return connection.getAssociateId();
     }
+
+    public ScheduledExecutorService getScheduler() { return scheduler; }
 }
