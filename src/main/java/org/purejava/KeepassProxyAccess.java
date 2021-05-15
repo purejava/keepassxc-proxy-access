@@ -51,6 +51,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
         scheduler = Executors.newSingleThreadScheduledExecutor();
         connection.addPropertyChangeListener(this);
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+                connection.removePropertyChangeListener(this)
+        ));
         connection.setCredentials(loadCredentials());
     }
 
