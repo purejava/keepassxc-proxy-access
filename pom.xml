@@ -39,6 +39,13 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <tweetnacl.version>1.1.2</tweetnacl.version>
+        <junixsocket.version>2.3.3</junixsocket.version>
+        <json.version>20201115</json.version>
+        <commons-lang3.version>3.11</commons-lang3.version>
+        <junit.version>5.7.0</junit.version>
+        <slf4j.version>1.7.30</slf4j.version>
     </properties>
 
     <!-- tweetnacl-java -->
@@ -46,35 +53,35 @@
         <dependency>
             <groupId>org.purejava</groupId>
             <artifactId>tweetnacl-java</artifactId>
-            <version>1.1.2</version>
+            <version>${tweetnacl.version}</version>
         </dependency>
 
         <!-- Unix Domain Sockets for Java -->
         <dependency>
             <groupId>com.kohlschutter.junixsocket</groupId>
             <artifactId>junixsocket-core</artifactId>
-            <version>2.3.3</version>
+            <version>${junixsocket.version}</version>
         </dependency>
 
         <!-- JSON for Java -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20201115</version>
+            <version>${json.version}</version>
         </dependency>
 
         <!-- Apache Commons -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.11</version>
+            <version>${commons-lang3.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.7.0</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -82,13 +89,13 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.7.0</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.7.0</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -96,14 +103,14 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.30</version>
+            <version>${slf4j.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.7.30</version>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
