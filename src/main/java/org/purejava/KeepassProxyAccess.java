@@ -1,7 +1,6 @@
 package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.keepassxc.Connection;
@@ -12,7 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -63,9 +65,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @return An Optional of the Credentials read from disc in case they are available, an empty Optional otherwise.
      */
     private Optional<Credentials> loadCredentials() {
-        try (FileInputStream fileIs = new FileInputStream(fileLocation);
-             ObjectInputStream objIs = new ObjectInputStream(fileIs)) {
-            Credentials c = (Credentials) objIs.readObject();
+        try (var fileIs = new FileInputStream(fileLocation);
+             var objIs = new ObjectInputStream(fileIs)) {
+            var c = (Credentials) objIs.readObject();
             return Optional.of(c);
         } catch (IOException | ClassNotFoundException e) {
             log.debug("Credentials could not be read from disc");
@@ -85,8 +87,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             return;
         }
         Runnable saveCommand = () -> this.saveCredentials(credentials);
-        ScheduledFuture<?> scheduledTask = scheduler.schedule(saveCommand, SAVE_DELAY_MS, TimeUnit.MILLISECONDS);
-        ScheduledFuture<?> previouslyScheduledTask = scheduledSaveCmd.getAndSet(scheduledTask);
+        var scheduledTask = scheduler.schedule(saveCommand, SAVE_DELAY_MS, TimeUnit.MILLISECONDS);
+        var previouslyScheduledTask = scheduledSaveCmd.getAndSet(scheduledTask);
         if (previouslyScheduledTask != null) {
             previouslyScheduledTask.cancel(false);
         }
@@ -99,11 +101,11 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     private void saveCredentials(Optional<Credentials> credentials) {
         log.debug("Attempting to save credentials");
         try {
-            Path path = Path.of(fileLocation);
+            var path = Path.of(fileLocation);
             Files.createDirectories(path.getParent());
-            Path tmpPath = path.resolveSibling(path.getFileName().toString() + ".tmp");
-            try (OutputStream ops = Files.newOutputStream(tmpPath, StandardOpenOption.CREATE_NEW);
-                 ObjectOutputStream objOps = new ObjectOutputStream(ops)) {
+            var tmpPath = path.resolveSibling(path.getFileName().toString() + ".tmp");
+            try (var ops = Files.newOutputStream(tmpPath, StandardOpenOption.CREATE_NEW);
+                 var objOps = new ObjectOutputStream(ops)) {
                 objOps.writeObject(credentials.get());
                 objOps.flush();
             }
@@ -188,13 +190,13 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     public boolean loginExists(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list, String password) {
-        Map<String, Object> response = getLogins(url, submitUrl, httpAuth, list);
+        var response = getLogins(url, submitUrl, httpAuth, list);
         if (response.isEmpty()) {
             return false;
         }
-        List<Object> array = (ArrayList<Object>) response.get("entries");
+        var array = (ArrayList<Object>) response.get("entries");
         for (Object o : array) {
-            Map<String, Object> credentials = (HashMap<String, Object>) o;
+            var credentials = (HashMap<String, Object>) o;
             if (credentials.get("password").equals(password)) return true;
         }
         return false;
@@ -202,7 +204,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     public boolean setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) {
         try {
-            JSONObject response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
+            var response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
             return response.has("success") && response.getString("success").equals("true");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
             log.info(e.toString(), e.getCause());
@@ -221,7 +223,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     public String generatePassword() {
         try {
-            JSONArray response = connection.generatePassword().getJSONArray("entries");
+            var response = connection.generatePassword().getJSONArray("entries");
             return response.getJSONObject(0).getString("password");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
             log.info(e.toString(), e.getCause());
@@ -231,7 +233,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     public boolean lockDatabase() {
         try {
-            JSONObject response = connection.lockDatabase();
+            connection.lockDatabase();
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
             log.info(e.toString(), e.getCause());
@@ -280,12 +282,12 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         if (groups.isEmpty()) {
             return Map.of();
         }
-        Map<String, String> groupTree = new HashMap<>();
-        Map<String, Object> m = groups.toMap();
-        Map<String, Object> n = (HashMap<String, Object>) m.get("groups");
-        List<Object> rootGroups = (ArrayList<Object>) n.get("groups");
-        Map<String, Object> rootGroup = (HashMap<String, Object>) rootGroups.get(0);
-        List<Object> children = (ArrayList<Object>) rootGroup.get("children");
+        var groupTree = new HashMap<String, String>();
+        var m = groups.toMap();
+        var n = (HashMap<String, Object>) m.get("groups");
+        var rootGroups = (ArrayList<Object>) n.get("groups");
+        var rootGroup = (HashMap<String, Object>) rootGroups.get(0);
+        var children = (ArrayList<Object>) rootGroup.get("children");
         traverse(children, groupTree);
         return groupTree;
     }
@@ -294,7 +296,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         children.stream()
                 .map(listItem -> (HashMap<String, Object>) listItem)
                 .forEach(li -> {
-                    List<Object> alc = (ArrayList<Object>) li.get("children");
+                    var alc = (ArrayList<Object>) li.get("children");
                     if (alc.size() == 0) {
                         groups.put(li.get("name").toString(), li.get("uuid").toString());
                     } else {

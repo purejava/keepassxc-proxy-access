@@ -24,7 +24,7 @@ public class LinuxMacConnection extends Connection {
     private final File socketFile;
 
     public LinuxMacConnection() {
-        String socketPath = getSocketPath();
+        var socketPath = getSocketPath();
         this.socketFile = new File(new File(socketPath), "/" + PROXY_NAME);
     }
 
@@ -62,7 +62,7 @@ public class LinuxMacConnection extends Connection {
     @Override
     protected JSONObject getCleartextResponse() throws IOException {
         int c;
-        String raw = "";
+        var raw = "";
         do {
             c = is.read();
             raw += (char) c;
@@ -78,7 +78,7 @@ public class LinuxMacConnection extends Connection {
      */
     private String getSocketPath() {
         if (SystemUtils.IS_OS_LINUX) {
-            String path = System.getenv("XDG_RUNTIME_DIR");
+            var path = System.getenv("XDG_RUNTIME_DIR");
             if (null == path) path = System.getenv("TMPDIR");
             return (null == path) ? "/tmp" : path;
         }

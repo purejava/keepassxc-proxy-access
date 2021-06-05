@@ -46,7 +46,7 @@ public class WindowsConnection extends Connection {
     @Override
     protected JSONObject getCleartextResponse() throws IOException {
         int c;
-        String raw = "";
+        var raw = "";
         do {
             c = pipe.read();
             raw += (char) c;
