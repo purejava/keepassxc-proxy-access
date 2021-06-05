@@ -57,7 +57,11 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         connection.setCredentials(loadCredentials());
     }
 
-    // TODO Add Javadoc
+    /**
+     * Loads the @see org.purejava.Credentials from disc, if available, to setup this library
+     * so that it can be used to send requests to and receive requests from a KeePassXC database.
+     * @return An Optional of the Credentials read from disc in case they are available, an empty Optional otherwise.
+     */
     private Optional<Credentials> loadCredentials() {
         try (FileInputStream fileIs = new FileInputStream(fileLocation);
              ObjectInputStream objIs = new ObjectInputStream(fileIs)) {
@@ -70,8 +74,11 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
 
-
-    // TODO Add Javadoc
+    /**
+     * Saves @see org.purejava.Credentials in a delayed background thread to disc, as this is a time consuming
+     * operation that might fail.
+     * @param credentials An Optional of the Credentials to be saved.
+     */
     private void scheduleSave(Optional<Credentials> credentials) {
         if (credentials.isEmpty()) {
             log.debug("Credentials are not present and won't be saved");
@@ -85,7 +92,10 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
-    // TODO Add Javadoc
+    /**
+     * Saves @see org.purejava.Credentials to disc.
+     * @param credentials An Optional of the Credentials to be saved.
+     */
     private void saveCredentials(Optional<Credentials> credentials) {
         log.debug("Attempting to save credentials");
         try {

@@ -5,7 +5,10 @@ import com.iwebpp.crypto.TweetNaclFast;
 import java.io.*;
 import java.util.Optional;
 
-// TODO Add Javadoc
+/**
+ * This holds the associateId and the public key part of the idKey that together form the credentials needed to
+ * access a KeePassXC database. Credentials is intended to be saved to and read from disc.
+ */
 public class Credentials implements Serializable {
     private transient TweetNaclFast.Box.KeyPair ownKeypair;
     private byte[] secretKey;
