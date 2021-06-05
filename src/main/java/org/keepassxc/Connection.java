@@ -2,9 +2,15 @@ package org.keepassxc;
 
 import com.iwebpp.crypto.TweetNaclFast;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.purejava.Credentials;
 import org.purejava.KeepassProxyAccessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -16,23 +22,37 @@ import java.util.*;
  */
 public abstract class Connection implements AutoCloseable {
 
+    private static final Logger log = LoggerFactory.getLogger(Connection.class);
+    private PropertyChangeSupport support;
+
     private TweetNaclFast.Box box;
-    private TweetNaclFast.Box.KeyPair keyPair;
-    private TweetNaclFast.Box.KeyPair idKeyPair;
+    private Optional<Credentials> credentials;
     private String clientID;
     private byte[] nonce;
-    private String associate_id;
+
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
+    private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
+    private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
+    private final String MISSING_CLASS = "Credentials have not been initialized";
 
     public Connection() {
-        keyPair = TweetNaclFast.Box.keyPair();
         byte[] array = new byte[24];
         new Random().nextBytes(array);
         clientID = b64encode(array);
         nonce = TweetNaclFast.randombytes(24);
+        credentials = Optional.empty();
+        support = new PropertyChangeSupport(this);
     }
 
-    public abstract void connect() throws IOException, KeepassProxyAccessException;
+    public void addPropertyChangeListener(PropertyChangeListener pcl) {
+        support.addPropertyChangeListener(pcl);
+    }
+
+    public void removePropertyChangeListener(PropertyChangeListener pcl) {
+        support.removePropertyChangeListener(pcl);
+    }
+
+    public abstract void connect() throws IOException;
 
     /**
      * Send an unencrypted message to the proxy.
@@ -57,18 +77,43 @@ public abstract class Connection implements AutoCloseable {
      * The proxy accepts messages in the JSON data format.
      *
      * @param msg The message to be sent. The key "action" describes the request to the proxy.
-     * @throws IOException Sending failed due to technical reasons.
+     * @throws IllegalStateException Connection was not initialized before.
+     * @throws IOException           Sending failed due to technical reasons.
      */
     private void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
-        String strMsg = jsonTxt(msg);
-        String encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
+        var unlockRequested = false;
 
-        sendCleartextMessage(jsonTxt(Map.of(
-                "action", msg.get("action").toString(),
-                "message", encrypted,
-                "nonce", b64encode(nonce),
-                "clientID", clientID
-        )));
+        if (!isConnected()) {
+            throw new IllegalStateException(NOT_CONNECTED);
+        }
+
+        var publicKey = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getServerPublicKey();
+        var keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
+
+        if (msg.containsKey("triggerUnlock") && msg.get("triggerUnlock").equals("true")) {
+            msg.remove("triggerUnlock");
+            unlockRequested = true;
+        }
+
+        var strMsg = jsonTxt(msg);
+        log.trace("Send - encrypting the following message: {}", strMsg);
+
+        box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
+
+        var encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
+
+        // Map.of can't be used here, because we need a mutable object
+        var message = new HashMap<String, Object>();
+        message.put("action", msg.get("action").toString());
+        message.put("message", encrypted);
+        message.put("nonce", b64encode(nonce));
+        message.put("clientID", clientID);
+
+        if (unlockRequested) {
+            message.put("triggerUnlock", "true");
+        }
+        sendCleartextMessage(jsonTxt(message));
+
         incrementNonce();
 
     }
@@ -77,26 +122,42 @@ public abstract class Connection implements AutoCloseable {
      * Receive an encrypted message from the proxy.
      * The proxy sends messages in the JSON data format.
      *
+     * @param action The original request that was send to the proxy.
      * @return The received message.
      * @throws IOException                 Retrieving failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
-    private JSONObject getEncryptedResponseAndDecrypt() throws IOException, KeepassProxyAccessException {
-        JSONObject response = getCleartextResponse();
+    private JSONObject getEncryptedResponseAndDecrypt(String action) throws IOException, KeepassProxyAccessException {
+        var response = getCleartextResponse();
+
+        // Handle signals
+        while (!response.has("error") && isSignal(response)) {
+            log.info("Received signal {}", response.getString("action"));
+            response = getCleartextResponse();
+        }
+
+        // Reading further messages from queue
+        while (response.has("action") && !response.getString("action").equals(action)) {
+            response = getCleartextResponse();
+            if (isSignal(response)) {
+                log.info("Received signal {}", response.getString("action"));
+            }
+        }
 
         if (response.has("error")) {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
-        if (response.has("action") && response.getString("action").equals("database-locked")) {
-            return response;
+        var serverNonce = b64decode(response.getString("nonce").getBytes());
+        var bMessage = box.open(b64decode(response.getString("message").getBytes()), serverNonce);
+
+        if (bMessage == null) {
+            throw new KeepassProxyAccessException("Error: message could not be decrypted");
         }
 
-        byte[] serverNonce = b64decode(response.getString("nonce").getBytes());
-        byte[] bMessage = box.open(b64decode(response.getString("message").getBytes()), serverNonce);
-
-        String decrypted = new String(bMessage, StandardCharsets.UTF_8);
-        JSONObject decryptedResponse = new JSONObject(decrypted);
+        var decrypted = new String(bMessage, StandardCharsets.UTF_8);
+        log.trace("Decrypted message: {}", decrypted);
+        var decryptedResponse = new JSONObject(decrypted);
 
         if (!decryptedResponse.has("success")) {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
@@ -105,13 +166,28 @@ public abstract class Connection implements AutoCloseable {
         return decryptedResponse;
     }
 
+    private boolean isSignal(JSONObject response) {
+        try {
+            return response.has("action") && response.getString("action").equals("database-locked")
+                    || response.has("action") && response.getString("action").equals("database-unlocked");
+        } catch (JSONException je) {
+            return false;
+        }
+    }
+
     /**
      * Exchange public keys between KeepassXC and this application.
      *
      * @throws IOException                 Connection to the proxy failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
      */
-    protected void changePublibKeys() throws IOException, KeepassProxyAccessException {
+    protected void changePublicKeys() throws IOException, KeepassProxyAccessException {
+        if (!isConnected()) {
+            throw new IllegalStateException(NOT_CONNECTED);
+        }
+
+        var keyPair = TweetNaclFast.Box.keyPair();
+
         // Send change-public-keys request
         sendCleartextMessage(jsonTxt(Map.of(
                 "action", "change-public-keys",
@@ -119,14 +195,22 @@ public abstract class Connection implements AutoCloseable {
                 "nonce", b64encode(nonce),
                 "clientID", clientID
         )));
-        JSONObject response = getCleartextResponse();
+        var response = getCleartextResponse();
 
         if (!response.has("success")) {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
         }
 
-        // Store box for further communication
-        box = new TweetNaclFast.Box(b64decode(response.getString("publicKey").getBytes()), keyPair.getSecretKey());
+        var publicKey = b64decode(response.getString("publicKey").getBytes());
+        box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
+
+        if (credentials.isEmpty()) {
+            setCredentials(Optional.of(new Credentials()));
+        }
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setOwnKeypair(keyPair);
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setServerPublicKey(publicKey);
+        support.firePropertyChange("credentialsCreated", null, credentials);
+
         incrementNonce();
 
     }
@@ -134,11 +218,13 @@ public abstract class Connection implements AutoCloseable {
     /**
      * Connects KeePassXC with a new client.
      *
+     * @throws IllegalStateException       Connection was not initialized before.
      * @throws IOException                 Connecting KeePassXC with a new client failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to associate KeePassXC with a new client.
      */
     public void associate() throws IOException, KeepassProxyAccessException {
-        idKeyPair = TweetNaclFast.Box.keyPair();
+        var idKeyPair = TweetNaclFast.Box.keyPair();
+        var keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
 
         // Send associate request
         sendEncryptedMessage(Map.of(
@@ -146,9 +232,11 @@ public abstract class Connection implements AutoCloseable {
                 "key", b64encode(keyPair.getPublicKey()),
                 "idKey", b64encode(idKeyPair.getPublicKey())
         ));
-        JSONObject response = getEncryptedResponseAndDecrypt();
+        var response = getEncryptedResponseAndDecrypt("associate");
 
-        associate_id = response.getString("id");
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
+        support.firePropertyChange("associated", null, credentials);
     }
 
     /**
@@ -161,7 +249,27 @@ public abstract class Connection implements AutoCloseable {
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request
         sendEncryptedMessage(Map.of("action", "get-databasehash"));
-        JSONObject response = getEncryptedResponseAndDecrypt();
+        var response = getEncryptedResponseAndDecrypt("get-databasehash");
+
+        return response.getString("hash");
+    }
+
+    /**
+     * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
+     * Sent together with a request to unlock the KeePassXC database.
+     *
+     * @param triggerUnlock When true, the KeePassXC application is brought to the front and unlock is requested from the user.
+     * @return The database hash of the current active KeePassXC database.
+     * @throws IOException                 Retrieving the hash failed due to technical reasons.
+     * @throws KeepassProxyAccessException It was impossible to get the hash.
+     */
+    public String getDatabasehash(boolean triggerUnlock) throws IOException, KeepassProxyAccessException {
+        // Send get-databasehash request with triggerUnlock, if needed
+        var map = new HashMap<String, Object>(); // Map.of can't be used here, because we need a mutable object
+        map.put("action", "get-databasehash");
+        map.put("triggerUnlock", Boolean.toString(triggerUnlock));
+        sendEncryptedMessage(map);
+        var response = getEncryptedResponseAndDecrypt("get-databasehash");
 
         return response.getString("hash");
     }
@@ -182,7 +290,7 @@ public abstract class Connection implements AutoCloseable {
                 "id", id,
                 "key", key
         ));
-        getEncryptedResponseAndDecrypt();
+        getEncryptedResponseAndDecrypt("test-associate");
 
     }
 
@@ -198,10 +306,10 @@ public abstract class Connection implements AutoCloseable {
      * @throws KeepassProxyAccessException No credentials found for the given URL.
      */
     public JSONObject getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
-        JSONArray array = new JSONArray();
+        var array = new JSONArray();
         // Syntax check for list
         for (Map<String, String> m : list) {
-            JSONObject o = new JSONObject(m);
+            var o = new JSONObject(m);
             if (!(o.has("id") && o.has("key") && o.length() == 2)) {
                 throw new KeepassProxyAccessException("JSON object key is malformed");
             }
@@ -216,7 +324,7 @@ public abstract class Connection implements AutoCloseable {
                 "httpAuth", httpAuth,
                 "keys", array
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("get-logins");
 
     }
 
@@ -253,7 +361,7 @@ public abstract class Connection implements AutoCloseable {
                 "groupUuid", ensureNotNull(groupUuid),
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("set-login");
 
     }
 
@@ -267,7 +375,7 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
         // Send get-database-groups
         sendEncryptedMessage(Map.of("action", "get-database-groups"));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("get-database-groups");
 
     }
 
@@ -285,7 +393,7 @@ public abstract class Connection implements AutoCloseable {
                 "nonce", b64encode(nonce),
                 "clientID", clientID
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("generate-password");
 
     }
 
@@ -299,7 +407,7 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject lockDatabase() throws IOException, KeepassProxyAccessException {
         // Send lock-database request
         sendEncryptedMessage(Map.of("action", "lock-database"));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("lock-database");
 
     }
 
@@ -319,7 +427,7 @@ public abstract class Connection implements AutoCloseable {
                 "action", "create-new-group",
                 "groupName", ensureNotNull(path)
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("create-new-group");
 
     }
 
@@ -338,7 +446,7 @@ public abstract class Connection implements AutoCloseable {
                 "action", "get-totp",
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt();
+        return getEncryptedResponseAndDecrypt("get-totp");
 
     }
 
@@ -356,8 +464,8 @@ public abstract class Connection implements AutoCloseable {
      * Increment nonce by 1
      */
     private void incrementNonce() {
-        int newNonce = ByteBuffer.wrap(nonce).getInt() + 1;
-        ByteBuffer dbuf = ByteBuffer.allocate(24).putInt(newNonce);
+        var newNonce = ByteBuffer.wrap(nonce).getInt() + 1;
+        var dbuf = ByteBuffer.allocate(24).putInt(newNonce);
         nonce = dbuf.array();
     }
 
@@ -389,14 +497,20 @@ public abstract class Connection implements AutoCloseable {
         return null == param ? "" : param;
     }
 
-    // Getters
+    // Getters and Setters
     public String getIdKeyPairPublicKey() {
-        return null == idKeyPair ? null : b64encode(idKeyPair.getPublicKey());
+        return credentials.map(value -> b64encode(value.getIdKeyPublicKey())).orElse("");
     }
 
     public String getAssociateId() {
-        return associate_id;
+        return credentials.map(Credentials::getAssociateId).orElse("");
     }
+
+    public void setCredentials(Optional<Credentials> credentials) {
+        this.credentials = credentials;
+    }
+
+    protected abstract boolean isConnected();
 
     @Override
     public abstract void close() throws Exception;

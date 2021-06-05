@@ -1,85 +1,262 @@
 package org.purejava;
 
 import org.apache.commons.lang3.SystemUtils;
-import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.keepassxc.Connection;
 import org.keepassxc.LinuxMacConnection;
 import org.keepassxc.WindowsConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class KeepassProxyAccess {
+public class KeepassProxyAccess implements PropertyChangeListener {
+    private static final Logger log = LoggerFactory.getLogger(KeepassProxyAccess.class);
 
     private Connection connection;
+    private String fileLocation;
+    private final String FILE_NAME = "keepass-proxy-access.dat";
+    private final long SAVE_DELAY_MS = 1000;
+    private final AtomicReference<ScheduledFuture<?>> scheduledSaveCmd = new AtomicReference<>();
+    private final ScheduledExecutorService scheduler;
 
     public KeepassProxyAccess() {
         if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX) {
             connection = new LinuxMacConnection();
+            fileLocation = System.getProperty("user.home");
+            if (SystemUtils.IS_OS_LINUX) {
+                fileLocation += "/.config/keepass-proxy-access/" + FILE_NAME;
+            }
+            if (SystemUtils.IS_OS_MAC_OSX) {
+                fileLocation += "/Library/Application Support/keepass-proxy-access/" + FILE_NAME;
+            }
         }
         if (SystemUtils.IS_OS_WINDOWS) {
             connection = new WindowsConnection();
+            fileLocation = System.getenv("AppData") + "keepass-proxy-access/" + FILE_NAME;
+        }
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        connection.addPropertyChangeListener(this);
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+                connection.removePropertyChangeListener(this)
+        ));
+        connection.setCredentials(loadCredentials());
+    }
+
+    /**
+     * Loads the @see org.purejava.Credentials from disc, if available, to setup this library
+     * so that it can be used to send requests to and receive requests from a KeePassXC database.
+     * @return An Optional of the Credentials read from disc in case they are available, an empty Optional otherwise.
+     */
+    private Optional<Credentials> loadCredentials() {
+        try (var fileIs = new FileInputStream(fileLocation);
+             var objIs = new ObjectInputStream(fileIs)) {
+            var c = (Credentials) objIs.readObject();
+            return Optional.of(c);
+        } catch (IOException | ClassNotFoundException e) {
+            log.debug("Credentials could not be read from disc");
+            return Optional.empty();
+        }
+    }
+
+
+    /**
+     * Saves @see org.purejava.Credentials in a delayed background thread to disc, as this is a time consuming
+     * operation that might fail.
+     * @param credentials An Optional of the Credentials to be saved.
+     */
+    private void scheduleSave(Optional<Credentials> credentials) {
+        if (credentials.isEmpty()) {
+            log.debug("Credentials are not present and won't be saved");
+            return;
+        }
+        Runnable saveCommand = () -> this.saveCredentials(credentials);
+        var scheduledTask = scheduler.schedule(saveCommand, SAVE_DELAY_MS, TimeUnit.MILLISECONDS);
+        var previouslyScheduledTask = scheduledSaveCmd.getAndSet(scheduledTask);
+        if (previouslyScheduledTask != null) {
+            previouslyScheduledTask.cancel(false);
         }
     }
 
     /**
-     * Convenience method to get the connection parameters that are required to re-establish a connection.
+     * Saves @see org.purejava.Credentials to disc.
+     * @param credentials An Optional of the Credentials to be saved.
+     */
+    private void saveCredentials(Optional<Credentials> credentials) {
+        log.debug("Attempting to save credentials");
+        try {
+            var path = Path.of(fileLocation);
+            Files.createDirectories(path.getParent());
+            var tmpPath = path.resolveSibling(path.getFileName().toString() + ".tmp");
+            try (var ops = Files.newOutputStream(tmpPath, StandardOpenOption.CREATE_NEW);
+                 var objOps = new ObjectOutputStream(ops)) {
+                objOps.writeObject(credentials.get());
+                objOps.flush();
+            }
+            Files.move(tmpPath, path, StandardCopyOption.REPLACE_EXISTING);
+            log.debug("Credentials saved");
+        } catch (IOException e) {
+            log.error("Credentials could not be saved to disc");
+            log.error(e.toString(), e.getCause());
+        }
+    }
+
+    /**
+     * Convenience method to get the connection parameters that are required to identify the right KeePassXC database.
      *
-     * @return The agreed associateID and IDKeyPublicKey.
+     * @return The entered associateID and returned IDKeyPublicKey.
      */
     public Map<String, String> exportConnection() {
-        return Map.of("id", this.connection.getAssociateId(),
-                "key", this.connection.getIdKeyPairPublicKey());
+        return Map.of("id", connection.getAssociateId(),
+                "key", connection.getIdKeyPairPublicKey());
     }
 
-    public void connect() throws IOException, KeepassProxyAccessException {
-        this.connection.connect();
+    public boolean connect() {
+        try {
+            connection.connect();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
-    public void associate() throws IOException, KeepassProxyAccessException {
-        this.connection.associate();
+    public boolean associate() {
+        try {
+            connection.associate();
+            return true;
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.info(e.toString(), e.getCause());
+            return false;
+        }
     }
 
-    public void testAssociate(String id, String key) throws IOException, KeepassProxyAccessException {
-        this.connection.testAssociate(id, key);
+    public boolean connectionAvailable() {
+        return getIdKeyPairPublicKey() != null &&
+               !getIdKeyPairPublicKey().isEmpty() &&
+                getAssociateId() != null &&
+                !getAssociateId().isEmpty() &&
+                testAssociate(getAssociateId(), getIdKeyPairPublicKey());
     }
 
-    public String getDatabasehash() throws IOException, KeepassProxyAccessException {
-        return this.connection.getDatabasehash();
+    public boolean testAssociate(String id, String key) {
+        try {
+            connection.testAssociate(id, key);
+            return true;
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.info(e.toString(), e.getCause());
+            return false;
+        }
     }
 
-    public Map<String, Object> getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
-        return this.connection.getLogins(url, submitUrl, httpAuth, list).toMap();
+    public String getDatabasehash(boolean... unlock) {
+        try {
+            if (unlock.length > 1) {
+                throw new IllegalStateException("Invalid number of parameters for getDatabasehash(boolean... unlock)");
+            }
+            return switch (unlock.length) {
+                case 0 -> connection.getDatabasehash();
+                case 1 -> connection.getDatabasehash(unlock[0]);
+                default -> "";
+            };
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.info(e.toString(), e.getCause());
+            return "";
+        }
     }
 
-    public Map<String, Object> setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
-        return this.connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid).toMap();
+    public Map<String, Object> getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) {
+        try {
+            return connection.getLogins(url, submitUrl, httpAuth, list).toMap();
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.info(e.toString(), e.getCause());
+            return Map.of();
+        }
     }
 
-    public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
-        return this.connection.getDatabaseGroups();
+    public boolean loginExists(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list, String password) {
+        var response = getLogins(url, submitUrl, httpAuth, list);
+        if (response.isEmpty()) {
+            return false;
+        }
+        var array = (ArrayList<Object>) response.get("entries");
+        for (Object o : array) {
+            var credentials = (HashMap<String, Object>) o;
+            if (credentials.get("password").equals(password)) return true;
+        }
+        return false;
     }
 
-    public String generatePassword() throws IOException, KeepassProxyAccessException {
-        JSONArray response = this.connection.generatePassword().getJSONArray("entries");
-        return response.getJSONObject(0).getString("password");
+    public boolean setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) {
+        try {
+            var response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
+            return response.has("success") && response.getString("success").equals("true");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return false;
+        }
     }
 
-    public boolean lockDatabase() throws IOException, KeepassProxyAccessException {
-        JSONObject response = this.connection.lockDatabase();
-        return response.has("action") && response.getString("action").equals("database-locked");
+    public JSONObject getDatabaseGroups() {
+        try {
+            return connection.getDatabaseGroups();
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            log.info(e.toString(), e.getCause());
+            return new JSONObject();
+        }
     }
 
-    public JSONObject createNewGroup(String path) throws IOException, KeepassProxyAccessException {
-        return this.connection.createNewGroup(path);
+    public String generatePassword() {
+        try {
+            var response = connection.generatePassword().getJSONArray("entries");
+            return response.getJSONObject(0).getString("password");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return "";
+        }
     }
 
-    public String getTotp(String uuid) throws IOException, KeepassProxyAccessException {
-        return this.connection.getTotp(uuid).getString("totp");
+    public boolean lockDatabase() {
+        try {
+            connection.lockDatabase();
+            return true;
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return false;
+        }
+    }
+
+    public Map<String, String> createNewGroup(String path) {
+        try {
+            return getNewGroupId(connection.createNewGroup(path));
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return Map.of();
+        }
+    }
+
+    public String getTotp(String uuid) {
+        try {
+            return connection.getTotp(uuid).getString("totp");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return "";
+        }
     }
 
     /**
@@ -102,12 +279,15 @@ public class KeepassProxyAccess {
      * @return Groups with their according groupUuids.
      */
     public Map<String, String> databaseGroupsToMap(JSONObject groups) {
-        Map<String, String> groupTree = new HashMap<>();
-        Map<String, Object> m = groups.toMap();
-        Map<String, Object> n = (HashMap<String, Object>) m.get("groups");
-        List<Object> rootGroups = (ArrayList<Object>) n.get("groups");
-        Map<String, Object> rootGroup = (HashMap<String, Object>) rootGroups.get(0);
-        List<Object> children = (ArrayList<Object>) rootGroup.get("children");
+        if (groups.isEmpty()) {
+            return Map.of();
+        }
+        var groupTree = new HashMap<String, String>();
+        var m = groups.toMap();
+        var n = (HashMap<String, Object>) m.get("groups");
+        var rootGroups = (ArrayList<Object>) n.get("groups");
+        var rootGroup = (HashMap<String, Object>) rootGroups.get(0);
+        var children = (ArrayList<Object>) rootGroup.get("children");
         traverse(children, groupTree);
         return groupTree;
     }
@@ -116,7 +296,7 @@ public class KeepassProxyAccess {
         children.stream()
                 .map(listItem -> (HashMap<String, Object>) listItem)
                 .forEach(li -> {
-                    List<Object> alc = (ArrayList<Object>) li.get("children");
+                    var alc = (ArrayList<Object>) li.get("children");
                     if (alc.size() == 0) {
                         groups.put(li.get("name").toString(), li.get("uuid").toString());
                     } else {
@@ -126,11 +306,18 @@ public class KeepassProxyAccess {
                 });
     }
 
+    @Override
+    public void propertyChange(PropertyChangeEvent event) {
+        scheduleSave((Optional<Credentials>) event.getNewValue());
+    }
+
     public String getIdKeyPairPublicKey() {
-        return this.connection.getIdKeyPairPublicKey();
+        return connection.getIdKeyPairPublicKey();
     }
 
     public String getAssociateId() {
-        return this.connection.getAssociateId();
+        return connection.getAssociateId();
     }
+
+    public ScheduledExecutorService getScheduler() { return scheduler; }
 }

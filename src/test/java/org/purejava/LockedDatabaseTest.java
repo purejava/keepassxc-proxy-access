@@ -4,7 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -16,15 +16,8 @@ public class LockedDatabaseTest {
     @Test
     @Order(2)
     @DisplayName("Testing connection over socket to KeePassXC")
-    public void shouldThrowException() {
-        Exception exception = assertThrows(KeepassProxyAccessException.class, () -> {
-            kpa.connect();
-            kpa.associate();
-        });
-
-        String expectedMessage = "ErrorCode: 1";
-        String actualMessage = exception.getMessage();
-
-        assertTrue(actualMessage.contains(expectedMessage));
+    public void shouldHaveNoErrors() {
+        assertTrue(kpa.connect());
+        assertFalse(kpa.associate());
     }
 }

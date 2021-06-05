@@ -12,7 +12,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 
 public class LinuxMacConnection extends Connection {
@@ -25,7 +24,7 @@ public class LinuxMacConnection extends Connection {
     private final File socketFile;
 
     public LinuxMacConnection() {
-        String socketPath = getSocketPath();
+        var socketPath = getSocketPath();
         this.socketFile = new File(new File(socketPath), "/" + PROXY_NAME);
     }
 
@@ -33,26 +32,29 @@ public class LinuxMacConnection extends Connection {
      * Connect to the KeePassXC proxy via a Unix Domain Sockets (AF_UNIX)
      * the proxy has opened.
      *
-     * @throws IOException                 Connecting to the proxy failed due to technical reasons or the proxy wasn't started.
-     * @throws KeepassProxyAccessException It was impossible to exchange new public keys with the proxy.
+     * @throws IOException Connecting to the proxy failed due to technical reasons or the proxy wasn't started.
      */
     @Override
-    public void connect() throws IOException, KeepassProxyAccessException {
+    public void connect() throws IOException {
         try {
             socket = AFUNIXSocket.newInstance();
             socket.connect(new AFUNIXSocketAddress(socketFile));
             os = socket.getOutputStream();
             is = socket.getInputStream();
-        } catch (SocketException e) {
+        } catch (IOException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
         }
-
-        changePublibKeys();
+        try {
+            changePublicKeys();
+        } catch (KeepassProxyAccessException e) {
+            log.error(e.toString(), e.getCause());
+        }
     }
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
+        log.trace("Sending message: {}", msg);
         os.write(msg.getBytes(StandardCharsets.UTF_8));
         os.flush();
     }
@@ -60,11 +62,12 @@ public class LinuxMacConnection extends Connection {
     @Override
     protected JSONObject getCleartextResponse() throws IOException {
         int c;
-        String raw = "";
+        var raw = "";
         do {
             c = is.read();
             raw += (char) c;
         } while (c != 125); // end of transmission
+        log.trace("Reading message: {}", raw);
         return new JSONObject(raw);
     }
 
@@ -75,7 +78,7 @@ public class LinuxMacConnection extends Connection {
      */
     private String getSocketPath() {
         if (SystemUtils.IS_OS_LINUX) {
-            String path = System.getenv("XDG_RUNTIME_DIR");
+            var path = System.getenv("XDG_RUNTIME_DIR");
             if (null == path) path = System.getenv("TMPDIR");
             return (null == path) ? "/tmp" : path;
         }
@@ -85,6 +88,11 @@ public class LinuxMacConnection extends Connection {
             // unknown OS
             return "-";
         }
+    }
+
+    @Override
+    protected boolean isConnected() {
+        return null != os;
     }
 
     @Override
