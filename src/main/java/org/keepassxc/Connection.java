@@ -275,7 +275,8 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Request for testing if this client has been associated with KeePassXC.
+     * Request for testing if the public IdKey and the public AssociateId are valid and enable this client
+     * to talk to KeePassXC. With valid IDs, the client is considered associated with KeePassXC.
      * The test is positive when no exception is thrown.
      *
      * @param id  The identifier of the KeePassXC database connection to be tested.
@@ -329,7 +330,7 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Request to store a new entry in the current KeePassXC database.
+     * Request to store a new entry or update an existing entry in the current KeePassXC database.
      *
      * @param url       The URL to be saved. The title of the new entry is the hostname of the URL.
      * @param submitUrl URL that can be passed along amd gets added to entry properties.
