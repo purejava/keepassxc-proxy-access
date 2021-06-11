@@ -6,7 +6,7 @@
 
     <groupId>org.purejava</groupId>
     <artifactId>keepassxc-proxy-access</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <packaging>jar</packaging>
 
     <name>keepassxc-proxy-access</name>
@@ -54,9 +54,9 @@
         <maven.compiler.target>1.9</maven.compiler.target>
 
         <tweetnacl.version>1.1.2</tweetnacl.version>
-        <junixsocket.version>2.3.3</junixsocket.version>
-        <json.version>20201115</json.version>
-        <commons-lang3.version>3.11</commons-lang3.version>
+        <junixsocket.version>2.3.4</junixsocket.version>
+        <json.version>20210307</json.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
         <junit.version>5.7.0</junit.version>
         <slf4j.version>1.7.30</slf4j.version>
     </properties>

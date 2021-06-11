@@ -275,7 +275,8 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Request for testing if this client has been associated with KeePassXC.
+     * Request for testing if the public IdKey and the public AssociateId are valid and enable this client
+     * to talk to KeePassXC. With valid IDs, the client is considered associated with KeePassXC.
      * The test is positive when no exception is thrown.
      *
      * @param id  The identifier of the KeePassXC database connection to be tested.
@@ -329,7 +330,7 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Request to store a new entry in the current KeePassXC database.
+     * Request to store a new entry or update an existing entry in the current KeePassXC database.
      *
      * @param url       The URL to be saved. The title of the new entry is the hostname of the URL.
      * @param submitUrl URL that can be passed along amd gets added to entry properties.
@@ -341,8 +342,8 @@ public abstract class Connection implements AutoCloseable {
      *                  the given groupUuid, the standard group is used to store the entry.
      * @param groupUuid Identifier to decide, where to store the entry. For an existing group, the groupUuid must be
      *                  given, otherwise the standard group is used to store the entry.
-     * @param uuid      Identifier whether an existing entry is updated or a new one is created. If empty, the entry is
-     *                  stored in the given groupUuid.
+     * @param uuid      Identifier whether an existing entry is updated or a new one is created. To update an existing entry,
+     *                  its current uuid is required. If empty, a new entry is stored in the given groupUuid.
      * @return An object that contains the key "success" with the value "true" in case the request was successful.
      * @throws IOException                 The request to store credentials failed due to technical reasons.
      * @throws KeepassProxyAccessException Credentials could not be stored in the KeePassXC database.
