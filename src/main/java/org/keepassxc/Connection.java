@@ -452,6 +452,23 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request to delete an entry, identified by its uuid.
+     *
+     * @param uuid The uuid of the entry.
+     * @return An object that contains the key "success" with the value "true" in case the request was successful.
+     * @throws IOException                 The request to delete the entry failed due to technical reasons.
+     * @throws KeepassProxyAccessException The entry could not be deleted.
+     */
+    public JSONObject deleteEntry(String uuid) throws IOException, KeepassProxyAccessException {
+        // Send delete-entry request
+        sendEncryptedMessage(Map.of(
+                "action", "delete-entry",
+                "uuid", ensureNotNull(uuid)
+        ));
+        return getEncryptedResponseAndDecrypt("delete-entry");
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.

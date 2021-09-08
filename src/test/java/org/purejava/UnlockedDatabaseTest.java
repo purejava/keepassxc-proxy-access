@@ -40,6 +40,8 @@ public class UnlockedDatabaseTest {
         log.info("Please allow to create new group");
         assertEquals(kpa.createNewGroup("Testgroup").get("name"), "Testgroup");
         assertTrue(null != kpa.getTotp("2aafee1a89fd435c8bad7df12bbaaa3e") && !kpa.getTotp("2aafee1a89fd435c8bad7df12bbaaa3e").isEmpty());
+        log.info("Please allow to delete entry");
+        assertTrue(kpa.deleteEntry("2aafee1a89fd435c8bad7df12bbaaa3e"));
         log.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
     }
