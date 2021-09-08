@@ -330,7 +330,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     /**
      * Request for locking the database from client.
      *
-     * @return True, if the database could not locked, false if something went wrong.
+     * @return True, if the database could be locked, false if something went wrong.
      */
     public boolean lockDatabase() {
         try {
