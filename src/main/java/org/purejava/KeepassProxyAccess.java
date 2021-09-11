@@ -330,7 +330,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     /**
      * Request for locking the database from client.
      *
-     * @return True, if the database could not locked, false if something went wrong.
+     * @return True, if the database could be locked, false if something went wrong.
      */
     public boolean lockDatabase() {
         try {
@@ -373,6 +373,22 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
             log.info(e.toString(), e.getCause());
             return "";
+        }
+    }
+
+    /**
+     * Request to delete an entry, identified by its uuid.
+     *
+     * @param uuid The uuid of the entry.
+     * @return True, in case the entry could be deleted, false otherwise.
+     */
+    public boolean deleteEntry(String uuid) {
+        try {
+            var response = connection.deleteEntry(uuid);
+            return response.has("success") && response.getString("success").equals("true");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return false;
         }
     }
 
