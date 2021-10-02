@@ -54,11 +54,11 @@
         <maven.compiler.target>1.9</maven.compiler.target>
 
         <tweetnacl.version>1.1.2</tweetnacl.version>
-        <junixsocket.version>2.3.4</junixsocket.version>
+        <junixsocket.version>2.4.0</junixsocket.version>
         <json.version>20210307</json.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
-        <junit.version>5.7.0</junit.version>
-        <slf4j.version>1.7.30</slf4j.version>
+        <junit.version>5.8.1</junit.version>
+        <slf4j.version>1.7.32</slf4j.version>
     </properties>
 
     <!-- tweetnacl-java -->
