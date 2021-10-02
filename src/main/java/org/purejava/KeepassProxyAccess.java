@@ -246,7 +246,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
-     * Checks, if a password is stored in the KeePassXC databases. This method calls
+     * Checks, whether a login exists and a given password is stored in the KeePassXC databases. This method calls
      * {@link org.purejava.KeepassProxyAccess#getLogins(String, String, boolean, List) getLogins} to search
      * the KeePassXC databases.
      * @see org.purejava.KeepassProxyAccess#getLogins(String, String, boolean, List)
@@ -256,19 +256,19 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @param httpAuth  Include database entries into search that are restricted to HTTP Basic Auth.
      * @param list      Id / key combinations identifying and granting access to KeePassXC databases.
      * @param password  Password to check.
-     * @return True, if the password was found in a KeePassXC database, false otherwise.
+     * @return ValidLogin The object describes whether a valid login exists for the given URL and whether the given password matches too.
      */
-    public boolean loginExists(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list, String password) {
+    public ValidLogin loginExists(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list, String password) {
         var response = getLogins(url, submitUrl, httpAuth, list);
         if (response.isEmpty()) {
-            return false;
+            return new ValidLogin(false, null);
         }
         var array = (ArrayList<Object>) response.get("entries");
         for (Object o : array) {
             var credentials = (HashMap<String, Object>) o;
-            if (credentials.get("password").equals(password)) return true;
+            if (credentials.get("password").equals(password)) return new ValidLogin(true, credentials.get("uuid").toString());
         }
-        return false;
+        return new ValidLogin(true, null);
     }
 
     /**
