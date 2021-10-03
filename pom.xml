@@ -74,6 +74,7 @@
             <groupId>com.kohlschutter.junixsocket</groupId>
             <artifactId>junixsocket-core</artifactId>
             <version>${junixsocket.version}</version>
+            <type>pom</type>
         </dependency>
 
         <!-- JSON for Java -->
