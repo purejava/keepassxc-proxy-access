@@ -49,6 +49,7 @@ Communication with KeePassXC happens via the KeePassXC protocol. Currently, the 
 *   `create-new-group`: Request to create a new group for the given name or path.
 *   `get-totp`: Request for receiving the current TOTP.
 *   `delete-entry`: Request for deleting an entry in the database, identified by its uuid.
+*   `request-autotype`: Request autotype from the KeePassXC database (KeePassXC 2.7.0 and newer).
 *   `database-locked`: A signal from KeePassXC, the current active database is locked.
 *   `database-unlocked`: A signal from KeePassXC, the current active database is unlocked.
 
