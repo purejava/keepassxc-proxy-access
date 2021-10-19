@@ -469,6 +469,24 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request autotype from the KeePassXC database (KeePassXC 2.7.0 and newer).
+     *
+     * @param url The URL autotype is requested for.
+     * @return An object that contains the key "success" with the value "true" in case the request was successful.
+     * @throws IOException                 The autotype request failed due to technical reasons.
+     * @throws KeepassProxyAccessException The request could not be processed.
+     */
+    public JSONObject requestAutotype(String url) throws IOException, KeepassProxyAccessException {
+        // Send request-autotype request
+        sendEncryptedMessage(Map.of(
+                "action", "request-autotype",
+                "groupName", ensureNotNull(url)
+        ));
+        return getEncryptedResponseAndDecrypt("request-autotype");
+
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.

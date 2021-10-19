@@ -393,6 +393,22 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
+     * Request autotype from the KeePassXC database (KeePassXC 2.7.0 and newer).
+     *
+     * @param url The URL autotype is requested for.
+     * @return True, in case the request was successful, false otherwise.
+     */
+    public boolean requestAutotype(String url) {
+        try {
+            var response = connection.requestAutotype(url);
+            return response.has("success") && response.getString("success").equals("true");
+        } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
+            log.info(e.toString(), e.getCause());
+            return false;
+        }
+    }
+
+    /**
      * Extract the groupUuid for the newly created group.
      * Note: in case a group with the following path was created: level1/level2, only level2 gets returned as name.
      *
