@@ -2,30 +2,34 @@ package org.keepassxc;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONObject;
-import org.newsclub.net.unix.AFUNIXSocket;
-import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.net.UnixDomainSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 
 public class LinuxMacConnection extends Connection {
 
     private static final Logger log = LoggerFactory.getLogger(LinuxMacConnection.class);
 
-    private AFUNIXSocket socket;
-    private OutputStream os;
-    private InputStream is;
-    private final File socketFile;
+    private final int BUFFER_SIZE = 1024;
+    private SocketChannel socket;
+    private final UnixDomainSocketAddress socketAddress;
+    private ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+    private Charset charset = StandardCharsets.UTF_8;
+    private CharsetDecoder charsetDecoder = charset.newDecoder();
+    private CharBuffer charBuffer = CharBuffer.allocate(BUFFER_SIZE);
 
     public LinuxMacConnection() {
         var socketPath = getSocketPath();
-        this.socketFile = new File(new File(socketPath), "/" + PROXY_NAME);
+        this.socketAddress = UnixDomainSocketAddress.of(socketPath + "/" + PROXY_NAME);
     }
 
     /**
@@ -37,10 +41,7 @@ public class LinuxMacConnection extends Connection {
     @Override
     public void connect() throws IOException {
         try {
-            socket = AFUNIXSocket.newInstance();
-            socket.connect(new AFUNIXSocketAddress(socketFile));
-            os = socket.getOutputStream();
-            is = socket.getInputStream();
+            socket = SocketChannel.open(socketAddress);
         } catch (IOException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
@@ -55,20 +56,27 @@ public class LinuxMacConnection extends Connection {
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
         log.trace("Sending message: {}", msg);
-        os.write(msg.getBytes(StandardCharsets.UTF_8));
-        os.flush();
+        socket.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
     protected JSONObject getCleartextResponse() throws IOException {
-        int c;
-        var raw = "";
-        do {
-            c = is.read();
-            raw += (char) c;
-        } while (c != 125); // end of transmission
+        var raw = new StringBuilder();
+        while (socket.read(buffer) != -1) {
+            buffer.flip();
+            charsetDecoder.decode(buffer, charBuffer, true);
+            charBuffer.flip();
+            raw.append(charBuffer);
+            buffer.compact();
+            if (charBuffer.toString().contains("}")) {
+                charBuffer.clear();
+                break;
+            } else {
+                charBuffer.clear();
+            }
+        }
         log.trace("Reading message: {}", raw);
-        return new JSONObject(raw);
+        return new JSONObject(raw.toString());
     }
 
     /**
@@ -92,13 +100,11 @@ public class LinuxMacConnection extends Connection {
 
     @Override
     protected boolean isConnected() {
-        return null != os;
+        return null!= socket && socket.isOpen();
     }
 
     @Override
     public void close() throws Exception {
-        is.close();
-        os.close();
         socket.close();
     }
 }
