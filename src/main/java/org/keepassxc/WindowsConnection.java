@@ -24,7 +24,7 @@ public class WindowsConnection extends Connection {
     @Override
     public void connect() throws IOException {
         try {
-            this.pipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
+            pipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
                     "rw");
         } catch (FileNotFoundException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
