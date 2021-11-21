@@ -37,17 +37,6 @@
         <url>https://github.com/purejava/keepassxc-proxy-access/tree/master</url>
     </scm>
 
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.9</maven.compiler.source>
@@ -60,8 +49,8 @@
         <slf4j.version>1.7.32</slf4j.version>
     </properties>
 
-    <!-- tweetnacl-java -->
     <dependencies>
+        <!-- tweetnacl-java -->
         <dependency>
             <groupId>org.purejava</groupId>
             <artifactId>tweetnacl-java</artifactId>
@@ -211,18 +200,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.8</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <serverId>ossrh</serverId>
-                    <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-                    <!-- Set this to true and the release will automatically proceed and sync to Central Repository will follow  -->
-                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.2</version>
@@ -237,6 +214,7 @@
             </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
             <id>sign</id>
@@ -261,6 +239,43 @@
                                 </configuration>
                             </execution>
                         </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>deploy-central</id>
+            <distributionManagement>
+                <repository>
+                    <id>ossrh</id>
+                    <name>Maven Central</name>
+                    <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                </repository>
+            </distributionManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.8</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                        </configuration>
+                        <dependencies>
+                            <!--
+                              TODO:
+                                Remove after OSSRH-66257, NEXUS-26993 are fixed,
+                                possibly via https://github.com/sonatype/nexus-maven-plugins/pull/91
+                            -->
+                            <dependency>
+                                <groupId>com.thoughtworks.xstream</groupId>
+                                <artifactId>xstream</artifactId>
+                                <version>1.4.15</version>
+                            </dependency>
+                        </dependencies>
                     </plugin>
                 </plugins>
             </build>
