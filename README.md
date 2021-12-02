@@ -15,7 +15,7 @@ Add `keepassxc-proxy-access` as a dependency to your project.
 <dependency>
     <groupId>org.purejava</groupId>
     <artifactId>keepassxc-proxy-access</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
 </dependency>
 ```
 
@@ -28,7 +28,7 @@ Examples on how to use the library can be found in the Maven test classes.
 
 You need to establish a connection to KeePassXC first:
 ```java
-private KeepassProxyAccess kpa = new KeepassProxyAccess();
+var kpa = new KeepassProxyAccess();
 kpa.connect();
 kpa.associate();
 ```
