@@ -1,6 +1,7 @@
 package org.keepassxc;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
@@ -22,10 +23,10 @@ public class LinuxMacConnection extends Connection {
     private final int BUFFER_SIZE = 1024;
     private SocketChannel socket;
     private final UnixDomainSocketAddress socketAddress;
-    private ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-    private Charset charset = StandardCharsets.UTF_8;
-    private CharsetDecoder charsetDecoder = charset.newDecoder();
-    private CharBuffer charBuffer = CharBuffer.allocate(BUFFER_SIZE);
+    private final ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+    private final Charset charset = StandardCharsets.UTF_8;
+    private final CharsetDecoder charsetDecoder = charset.newDecoder();
+    private final CharBuffer charBuffer = CharBuffer.allocate(BUFFER_SIZE);
 
     public LinuxMacConnection() {
         var socketPath = getSocketPath();
@@ -47,6 +48,7 @@ public class LinuxMacConnection extends Connection {
             throw e;
         }
         try {
+            lauchMessagePublisher();
             changePublicKeys();
         } catch (KeepassProxyAccessException e) {
             log.error(e.toString(), e.getCause());
@@ -60,9 +62,15 @@ public class LinuxMacConnection extends Connection {
     }
 
     @Override
-    protected JSONObject getCleartextResponse() throws IOException {
+    protected JSONObject getCleartextResponse() {
         var raw = new StringBuilder();
-        while (socket.read(buffer) != -1) {
+        while (true) {
+            try {
+                if (socket.read(buffer) == -1) break;
+            } catch (IOException e) {
+                log.error(e.toString(), e.getCause());
+                return new JSONObject();
+            }
             buffer.flip();
             charsetDecoder.decode(buffer, charBuffer, true);
             charBuffer.flip();
@@ -76,7 +84,12 @@ public class LinuxMacConnection extends Connection {
             }
         }
         log.trace("Reading message: {}", raw);
-        return new JSONObject(raw.toString());
+        try {
+            return new JSONObject(raw.toString());
+        } catch (JSONException e) {
+            log.error("Message corrupted. Received: {}", raw);
+            return new JSONObject();
+        }
     }
 
     /**
@@ -105,6 +118,8 @@ public class LinuxMacConnection extends Connection {
 
     @Override
     public void close() throws Exception {
+        messagePublisher.doStop();
+        executorService.shutdown();
         socket.close();
     }
 }

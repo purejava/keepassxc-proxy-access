@@ -1,5 +1,6 @@
 package org.keepassxc;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.purejava.KeepassProxyAccessException;
 import org.slf4j.Logger;
@@ -14,7 +15,8 @@ public class WindowsConnection extends Connection {
 
     private static final Logger log = LoggerFactory.getLogger(WindowsConnection.class);
 
-    private RandomAccessFile pipe;
+    private RandomAccessFile readPipe;
+    private RandomAccessFile writePipe;
 
     /**
      * Connect to the KeePassXC proxy via a Windows named pipe the proxy has opened.
@@ -24,13 +26,16 @@ public class WindowsConnection extends Connection {
     @Override
     public void connect() throws IOException {
         try {
-            pipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
+            readPipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
+                    "r");
+            writePipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
                     "rw");
         } catch (FileNotFoundException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
         }
         try {
+            lauchMessagePublisher();
             changePublicKeys();
         } catch (KeepassProxyAccessException e) {
             log.error(e.toString(), e.getCause());
@@ -40,28 +45,41 @@ public class WindowsConnection extends Connection {
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
         log.trace("Sending message: {}", msg);
-        pipe.write(msg.getBytes(StandardCharsets.UTF_8));
+        writePipe.write(msg.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
-    protected JSONObject getCleartextResponse() throws IOException {
+    protected JSONObject getCleartextResponse() {
         int c;
         var raw = "";
         do {
-            c = pipe.read();
-            raw += (char) c;
+            try {
+                c = readPipe.read();
+                raw += (char) c;
+            } catch (IOException e) {
+                log.error(e.toString(), e.getCause());
+                return new JSONObject();
+            }
         } while (c != 125); // end of transmission
         log.trace("Reading message: {}", raw);
-        return new JSONObject(raw);
+        try {
+            return new JSONObject(raw);
+        } catch (JSONException e) {
+            log.error("Message corrupted. Received: {}", raw);
+            return new JSONObject();
+        }
     }
 
     @Override
     protected boolean isConnected() {
-        return null != pipe;
+        return null != readPipe && null != writePipe;
     }
 
     @Override
     public void close() throws Exception {
-        pipe.close();
+        messagePublisher.doStop();
+        executorService.shutdown();
+        readPipe.close();
+        writePipe.close();
     }
 }

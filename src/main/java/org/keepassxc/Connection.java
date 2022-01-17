@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Establishes a connection to KeePassXC via its build-in proxy.
@@ -23,12 +24,17 @@ import java.util.*;
 public abstract class Connection implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(Connection.class);
-    private PropertyChangeSupport support;
+    private final PropertyChangeSupport support;
 
     private TweetNaclFast.Box box;
     private Optional<Credentials> credentials;
-    private String clientID;
+    private final String clientID;
+    private static final int nonceLength = 24;
     private byte[] nonce;
+
+    final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    final MessagePublisher messagePublisher = new MessagePublisher();
+    private final ConcurrentLinkedQueue<JSONObject> queue = new ConcurrentLinkedQueue<>();
 
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
     private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
@@ -36,12 +42,70 @@ public abstract class Connection implements AutoCloseable {
     private final String MISSING_CLASS = "Credentials have not been initialized";
 
     public Connection() {
-        byte[] array = new byte[24];
+        byte[] array = new byte[nonceLength];
         new Random().nextBytes(array);
         clientID = b64encode(array);
-        nonce = TweetNaclFast.randombytes(24);
+        nonce = TweetNaclFast.randombytes(nonceLength);
         credentials = Optional.empty();
         support = new PropertyChangeSupport(this);
+    }
+
+    class MessagePublisher implements Runnable {
+        private boolean doStop = false;
+
+        public synchronized void doStop() {
+            this.doStop = true;
+        }
+
+        private synchronized boolean keepRunning() {
+            return !this.doStop;
+        }
+
+        @Override
+        public void run() {
+            while (keepRunning()) {
+                queue.offer(getCleartextResponse());
+            }
+            log.debug("MessagePublisher stopped");
+        }
+    }
+
+    class MessageConsumer implements Callable<JSONObject> {
+        private final String action;
+
+        public MessageConsumer(String action) {
+            this.action = action;
+        }
+
+        @Override
+        public JSONObject call() throws Exception {
+            while (true) {
+                var response = queue.peek();
+                if (null == response) {
+                    Thread.sleep(200);
+                    continue;
+                }
+                if (isSignal(response)) {
+                    queue.poll();
+                    continue;
+                }
+                if (response.toString().equals("{}")) {
+                    queue.poll();
+                    log.trace("KeePassXC send an empty response: {}", response);
+                    continue;
+                }
+                if (!response.has("success")) break;
+                if (response.has("action") && response.getString("action").equals(action)) break;
+                log.trace("Response added to queue: {}", response);
+            }
+            log.trace("Retrieved from queue: {}", queue.peek());
+            return queue.poll();
+        }
+    }
+
+    void lauchMessagePublisher() {
+        log.debug("MessagePublisher started");
+        executorService.execute(messagePublisher);
     }
 
     public void addPropertyChangeListener(PropertyChangeListener pcl) {
@@ -64,13 +128,26 @@ public abstract class Connection implements AutoCloseable {
     protected abstract void sendCleartextMessage(String msg) throws IOException;
 
     /**
-     * Receive an unencrypted message from the proxy.
-     * The proxy sends messages in the JSON data format.
+     * Read a raw message ("as is") from the KeePassXC proxy. Blocks, until message could be read.
      *
-     * @return The received message.
-     * @throws IOException Retrieving failed due to technical reasons.
+     * @return The received raw message, therefore unencrypted.
      */
-    protected abstract JSONObject getCleartextResponse() throws IOException;
+    protected abstract JSONObject getCleartextResponse();
+
+    /**
+     * Test, if the response is a "database-locked" or "database-unlocked" signal.
+     *
+     * @param response The response to check.
+     * @return True, if the response is a signal, false otherwise.
+     */
+    private boolean isSignal(JSONObject response) {
+        try {
+            return response.has("action") && response.getString("action").equals("database-locked")
+                    || response.has("action") && response.getString("action").equals("database-unlocked");
+        } catch (JSONException je) {
+            return false;
+        }
+    }
 
     /**
      * Send an encrypted message to the proxy.
@@ -99,6 +176,7 @@ public abstract class Connection implements AutoCloseable {
         log.trace("Send - encrypting the following message: {}", strMsg);
 
         box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
+        nonce = ramdomGenerateNonce();
 
         var encrypted = b64encode(box.box(strMsg.getBytes(), nonce));
 
@@ -114,34 +192,23 @@ public abstract class Connection implements AutoCloseable {
         }
         sendCleartextMessage(jsonTxt(message));
 
-        incrementNonce();
-
     }
 
     /**
-     * Receive an encrypted message from the proxy.
+     * Receive the encrypted message from the proxy that fits an action and decrypt it.
      * The proxy sends messages in the JSON data format.
      *
-     * @param action The original request that was send to the proxy.
-     * @return The received message.
-     * @throws IOException                 Retrieving failed due to technical reasons.
+     * @param action The original request that was sent to the proxy.
+     * @return The received message, decrypted.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
-    private JSONObject getEncryptedResponseAndDecrypt(String action) throws IOException, KeepassProxyAccessException {
-        var response = getCleartextResponse();
+    private JSONObject getEncryptedResponseAndDecrypt(String action) throws KeepassProxyAccessException {
+        var response = new JSONObject();
 
-        // Handle signals
-        while (!response.has("error") && isSignal(response)) {
-            log.info("Received signal {}", response.getString("action"));
-            response = getCleartextResponse();
-        }
-
-        // Reading further messages from queue
-        while (response.has("action") && !response.getString("action").equals(action)) {
-            response = getCleartextResponse();
-            if (isSignal(response)) {
-                log.info("Received signal {}", response.getString("action"));
-            }
+        try {
+            response = executorService.submit(new MessageConsumer(action)).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error(e.toString(), e.getCause());
         }
 
         if (response.has("error")) {
@@ -166,15 +233,6 @@ public abstract class Connection implements AutoCloseable {
         return decryptedResponse;
     }
 
-    private boolean isSignal(JSONObject response) {
-        try {
-            return response.has("action") && response.getString("action").equals("database-locked")
-                    || response.has("action") && response.getString("action").equals("database-unlocked");
-        } catch (JSONException je) {
-            return false;
-        }
-    }
-
     /**
      * Exchange public keys between KeepassXC and this application.
      *
@@ -187,6 +245,7 @@ public abstract class Connection implements AutoCloseable {
         }
 
         var keyPair = TweetNaclFast.Box.keyPair();
+        nonce = ramdomGenerateNonce();
 
         // Send change-public-keys request
         sendCleartextMessage(jsonTxt(Map.of(
@@ -195,7 +254,14 @@ public abstract class Connection implements AutoCloseable {
                 "nonce", b64encode(nonce),
                 "clientID", clientID
         )));
-        var response = getCleartextResponse();
+
+        var response = new JSONObject();
+
+        try {
+            response = executorService.submit(new MessageConsumer("change-public-keys")).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error(e.toString(), e.getCause());
+        }
 
         if (!response.has("success")) {
             throw new KeepassProxyAccessException("ErrorCode: " + response.getString("errorCode") + ", " + response.getString("error"));
@@ -210,8 +276,6 @@ public abstract class Connection implements AutoCloseable {
         credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setOwnKeypair(keyPair);
         credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setServerPublicKey(publicKey);
         support.firePropertyChange("credentialsCreated", null, credentials);
-
-        incrementNonce();
 
     }
 
@@ -355,7 +419,6 @@ public abstract class Connection implements AutoCloseable {
                 "url", ensureNotNull(url),
                 "submitUrl", ensureNotNull(submitUrl),
                 "id", ensureNotNull(id),
-                "nonce", b64encode(nonce),
                 "login", ensureNotNull(login),
                 "password", ensureNotNull(password),
                 "group", ensureNotNull(group),
@@ -391,7 +454,6 @@ public abstract class Connection implements AutoCloseable {
         // Send generate-password request
         sendEncryptedMessage(Map.of(
                 "action", "generate-password",
-                "nonce", b64encode(nonce),
                 "clientID", clientID
         ));
         return getEncryptedResponseAndDecrypt("generate-password");
@@ -497,12 +559,12 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
-     * Increment nonce by 1
+     * Genrate a randomly generated nonce.
+     *
+     * @return The new nonce.
      */
-    private void incrementNonce() {
-        var newNonce = ByteBuffer.wrap(nonce).getInt() + 1;
-        var dbuf = ByteBuffer.allocate(24).putInt(newNonce);
-        nonce = dbuf.array();
+    private byte[] ramdomGenerateNonce() {
+        return TweetNaclFast.randombytes(nonceLength);
     }
 
     /**
