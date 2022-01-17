@@ -59,7 +59,7 @@ If you like this project, you can give me a cup of coffee :)
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=XVX9ZM7WE4ANL)
 
 # Copyright
-Copyright (C) 2021 Ralph Plawetzki
+Copyright (C) 2021-2022 Ralph Plawetzki
 
 The keepassxc-proxy-access logo is based on an [ICONFINDER logo](https://www.iconfinder.com/icons/4484570/hosting_link_proxy_server_url_window_icon) that is published under the [Creative Commons Attribution 3.0 Unported licence](https://creativecommons.org/licenses/by/3.0/) (CC BY 3.0). I modified the icon to my needs by changing the interior and adding the KeePassXC logo.
 
