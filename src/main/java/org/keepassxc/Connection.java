@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -36,6 +35,9 @@ public abstract class Connection implements AutoCloseable {
     final MessagePublisher messagePublisher = new MessagePublisher();
     private final ConcurrentLinkedQueue<JSONObject> queue = new ConcurrentLinkedQueue<>();
 
+    private final long RESPONSE_DELAY_MS = 500;
+    private final ScheduledExecutorService scheduler;
+
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
     private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
     private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
@@ -48,6 +50,7 @@ public abstract class Connection implements AutoCloseable {
         nonce = TweetNaclFast.randombytes(nonceLength);
         credentials = Optional.empty();
         support = new PropertyChangeSupport(this);
+        scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
     class MessagePublisher implements Runnable {
@@ -296,11 +299,27 @@ public abstract class Connection implements AutoCloseable {
                 "key", b64encode(keyPair.getPublicKey()),
                 "idKey", b64encode(idKeyPair.getPublicKey())
         ));
-        var response = getEncryptedResponseAndDecrypt("associate");
 
-        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
-        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
-        support.firePropertyChange("associated", null, credentials);
+        // TODO:
+        //  Revert after Qt bug is fixed:
+        //  getEncryptedResponseAndDecrypt needs to be run delayed and more important:
+        //  a KeepassProxyAccessException needs to be thrown to interrupt the current program flow
+        //  otherwise bringing up the association dialog blocks due to a Qt bug,
+        //  see https://github.com/keepassxreboot/keepassxc/issues/7099
+        Runnable lookupResponse = () -> {
+            JSONObject response = null;
+            try {
+                response = getEncryptedResponseAndDecrypt("associate");
+            } catch (KeepassProxyAccessException e) {
+                log.error(e.toString(), e.getCause());
+            }
+            assert response != null;
+            credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
+            credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
+            support.firePropertyChange("associated", null, credentials);
+        };
+        scheduler.schedule(lookupResponse, RESPONSE_DELAY_MS, TimeUnit.MILLISECONDS);
+        throw new KeepassProxyAccessException("Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099");
     }
 
     /**
