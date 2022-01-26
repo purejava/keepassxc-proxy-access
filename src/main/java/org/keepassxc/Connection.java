@@ -42,6 +42,7 @@ public abstract class Connection implements AutoCloseable {
     private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
     private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
     private final String MISSING_CLASS = "Credentials have not been initialized";
+    public final String EXCEPTION_INFO = "Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099";
 
     public Connection() {
         byte[] array = new byte[nonceLength];
@@ -319,7 +320,7 @@ public abstract class Connection implements AutoCloseable {
             support.firePropertyChange("associated", null, credentials);
         };
         scheduler.schedule(lookupResponse, RESPONSE_DELAY_MS, TimeUnit.MILLISECONDS);
-        throw new KeepassProxyAccessException("Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099");
+        throw new KeepassProxyAccessException(EXCEPTION_INFO);
     }
 
     /**

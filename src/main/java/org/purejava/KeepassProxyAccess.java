@@ -162,6 +162,10 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.associate();
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            // TODO:
+            //  Revert after Qt bug is fixed
+            //  This compensates throwing a KeepassProxyAccessException in Connection#associate()
+            if (e.getMessage().equals(connection.EXCEPTION_INFO)) return true;
             log.info(e.toString(), e.getCause());
             return false;
         }
