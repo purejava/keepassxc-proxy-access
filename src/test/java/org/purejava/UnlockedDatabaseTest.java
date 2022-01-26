@@ -19,15 +19,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class UnlockedDatabaseTest {
     private static final Logger log = LoggerFactory.getLogger(UnlockedDatabaseTest.class);
 
-    private KeepassProxyAccess kpa = new KeepassProxyAccess();
+    private final KeepassProxyAccess kpa = new KeepassProxyAccess();
 
     @Test
     @Order(3)
     @DisplayName("Testing KeePassXC proxy functionality")
-    public void shouldHaveNoErrors() {
-        log.info("Please enter a name for the connection in the pop-up");
+    public void shouldHaveNoErrors() throws InterruptedException {
+        log.info("Please enter a name for the connection in the pop-up within 10 seconds");
         assertTrue(kpa.connect());
         assertTrue(kpa.associate());
+        // TODO:
+        //  Revert after Qt bug is fixed
+        //  This compensates throwing a KeepassProxyAccessException in Connection#associate()
+        Thread.sleep(10000L); // give me 10 seconds to enter a associate id
         assertTrue(null != kpa.getDatabasehash() && !kpa.getDatabasehash().isEmpty());
         assertTrue(kpa.testAssociate(kpa.getAssociateId(), kpa.getIdKeyPairPublicKey()));
         log.info("Please allow access to credentials");
