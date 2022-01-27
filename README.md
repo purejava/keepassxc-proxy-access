@@ -15,7 +15,7 @@ Add `keepassxc-proxy-access` as a dependency to your project.
 <dependency>
     <groupId>org.purejava</groupId>
     <artifactId>keepassxc-proxy-access</artifactId>
-    <version>0.0.7</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
