@@ -162,6 +162,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.associate();
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
+            // TODO:
+            //  This never returns true as long as the workaround is in place, because
+            //  Connection#associate() throws a KeepassProxyAccessException on associating
             log.info(e.toString(), e.getCause());
             return false;
         }
