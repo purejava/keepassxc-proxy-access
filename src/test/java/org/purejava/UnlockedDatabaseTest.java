@@ -10,8 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * For this test, KeePassXC should be started and unlocked.
@@ -27,7 +26,10 @@ public class UnlockedDatabaseTest {
     public void shouldHaveNoErrors() throws InterruptedException {
         log.info("Please enter a name for the connection in the pop-up within 10 seconds");
         assertTrue(kpa.connect());
-        assertTrue(kpa.associate());
+        // TODO:
+        //  Revert after Qt bug is fixed
+        //  This is false due to the workaround, although association succeeds
+        assertFalse(kpa.associate());
         // TODO:
         //  Revert after Qt bug is fixed
         //  This compensates throwing a KeepassProxyAccessException in Connection#associate()
