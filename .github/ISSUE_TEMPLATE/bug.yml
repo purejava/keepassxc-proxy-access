@@ -25,6 +25,7 @@ body:
           - Operating System: Windows 11
           - Cryptomator: 1.6.5
           - keepassxc-cryptomator-1.0.1.jar
+          - KeePassXC: 2.6.6
       value: |
           - Operating System:
           - Cryptomator:
