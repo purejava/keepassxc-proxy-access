@@ -85,6 +85,9 @@ public class LinuxMacConnection extends Connection {
         }
         log.trace("Reading message: {}", raw);
         try {
+            var s = raw.toString();
+            // Test, if we received more than one message with the last read
+            if (s.length() - s.replace("}", "").length() > 1) throw new JSONException("");
             return new JSONObject(raw.toString());
         } catch (JSONException e) {
             log.error("Message corrupted. Received: {}", raw);
