@@ -15,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.module.ModuleDescriptor.Version;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -35,6 +36,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     private final long SAVE_DELAY_MS = 1000;
     private final AtomicReference<ScheduledFuture<?>> scheduledSaveCmd = new AtomicReference<>();
     private final ScheduledExecutorService scheduler;
+
+    private final String V2_7_0 = "2.7.0";
 
     public KeepassProxyAccess() {
         if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX) {
@@ -322,8 +325,12 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      */
     public String generatePassword() {
         try {
-            var response = connection.generatePassword().getJSONArray("entries");
-            return response.getJSONObject(0).getString("password");
+            var response = connection.generatePassword();
+            if (isMinimiumVersion(response.getString("version"), V2_7_0)) {
+                return response.getString("password");
+            } else {
+                return response.getJSONArray("entries").getJSONObject(0).getString("password");
+            }
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
             log.info(e.toString(), e.getCause());
             return "";
@@ -456,6 +463,17 @@ public class KeepassProxyAccess implements PropertyChangeListener {
                         traverse(alc, groups);
                     }
                 });
+    }
+
+    /**
+     * Compare two software version strings to check for a minimum software version.
+     *
+     * @param v1 The first version string.
+     * @param v2 The second version string.
+     * @return True in case v1 >= v2, false otherwise.
+     */
+    private boolean isMinimiumVersion(String v1, String v2) {
+        return Version.parse(v1).compareTo(Version.parse(v2)) >= 0;
     }
 
     @Override

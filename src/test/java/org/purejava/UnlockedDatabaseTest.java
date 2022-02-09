@@ -42,7 +42,7 @@ public class UnlockedDatabaseTest {
         assertTrue(kpa.getLogins("https://github.com", null, false, l).toString().contains("uuid=2aafee1a89fd435c8bad7df12bbaaa3e"));
         assertTrue(kpa.setLogin("https://github.com", "https://github.com", null, "User", "Passsword", "Group", null, null));
         assertTrue(kpa.databaseGroupsToMap(kpa.getDatabaseGroups()).toString().contains("KeePassXC-Browser Passwords"));
-        assertTrue(null != kpa.generatePassword() && !kpa.generatePassword().isEmpty());
+        assertFalse(kpa.generatePassword().isEmpty());
         log.info("Please allow to create new group");
         assertEquals(kpa.createNewGroup("Testgroup").get("name"), "Testgroup");
         assertTrue(null != kpa.getTotp("2aafee1a89fd435c8bad7df12bbaaa3e") && !kpa.getTotp("2aafee1a89fd435c8bad7df12bbaaa3e").isEmpty());
