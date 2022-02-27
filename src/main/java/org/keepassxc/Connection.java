@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Establishes a connection to KeePassXC via its build-in proxy.
@@ -32,8 +33,12 @@ public abstract class Connection implements AutoCloseable {
     private byte[] nonce;
 
     final ExecutorService executorService = Executors.newFixedThreadPool(2);
-    final MessagePublisher messagePublisher = new MessagePublisher();
+    protected MessagePublisher messagePublisher;
     private final ConcurrentLinkedQueue<JSONObject> queue = new ConcurrentLinkedQueue<>();
+
+    private final int MAX_ERROR_COUNT = 4;
+    private final int RECONNECT_DELAY_S = 15;
+    private final AtomicReference<ScheduledFuture<?>> scheduledConnectCmd = new AtomicReference<>();
 
     private final long RESPONSE_DELAY_MS = 500;
     private final ScheduledExecutorService scheduler;
@@ -56,6 +61,7 @@ public abstract class Connection implements AutoCloseable {
 
     class MessagePublisher implements Runnable {
         private boolean doStop = false;
+        private int errorCount = 0;
 
         public synchronized void doStop() {
             this.doStop = true;
@@ -68,7 +74,18 @@ public abstract class Connection implements AutoCloseable {
         @Override
         public void run() {
             while (keepRunning()) {
-                queue.offer(getCleartextResponse());
+                var response = getCleartextResponse();
+                if (!response.isEmpty()) {
+                    queue.offer(response);
+                    errorCount = 0;
+                } else {
+                    errorCount++;
+                    if (errorCount > MAX_ERROR_COUNT) {
+                        log.info("Too much errors - stopping MessagePublisher");
+                        doStop();
+                        reconnect();
+                    }
+                }
             }
             log.debug("MessagePublisher stopped");
         }
@@ -108,8 +125,28 @@ public abstract class Connection implements AutoCloseable {
     }
 
     void lauchMessagePublisher() {
+        messagePublisher = new MessagePublisher();
         log.debug("MessagePublisher started");
         executorService.execute(messagePublisher);
+    }
+
+    /**
+     * Tries to reconnect after a configured time in case connection to KeePassXC was lost.
+     * It keeps on trying until a new connection could be established.
+     */
+    private void reconnect() {
+        Runnable connect = () -> {
+            try {
+                this.connect();
+            } catch (IOException e) {
+                reconnect();
+            }
+        };
+        var scheduledTask = scheduler.schedule(connect, RECONNECT_DELAY_S, TimeUnit.SECONDS);
+        var previouslyScheduledTask = scheduledConnectCmd.getAndSet(scheduledTask);
+        if (previouslyScheduledTask != null) {
+            previouslyScheduledTask.cancel(false);
+        }
     }
 
     public void addPropertyChangeListener(PropertyChangeListener pcl) {
