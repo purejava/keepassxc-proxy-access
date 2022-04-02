@@ -198,7 +198,7 @@ public abstract class Connection implements AutoCloseable {
      * @throws IllegalStateException Connection was not initialized before.
      * @throws IOException           Sending failed due to technical reasons.
      */
-    private void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
+    private synchronized void sendEncryptedMessage(Map<String, Object> msg) throws IOException {
         var unlockRequested = false;
 
         if (!isConnected()) {
@@ -243,7 +243,7 @@ public abstract class Connection implements AutoCloseable {
      * @return The received message, decrypted.
      * @throws KeepassProxyAccessException It was impossible to process the requested action.
      */
-    private JSONObject getEncryptedResponseAndDecrypt(String action) throws KeepassProxyAccessException {
+    private synchronized JSONObject getEncryptedResponseAndDecrypt(String action) throws KeepassProxyAccessException {
         var response = new JSONObject();
 
         try {
