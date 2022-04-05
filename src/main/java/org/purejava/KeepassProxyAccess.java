@@ -52,7 +52,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
         if (SystemUtils.IS_OS_WINDOWS) {
             connection = new WindowsConnection();
-            fileLocation = System.getenv("AppData") + "keepass-proxy-access/" + FILE_NAME;
+            fileLocation = System.getenv("AppData") + "/keepass-proxy-access/" + FILE_NAME;
         }
         scheduler = Executors.newSingleThreadScheduledExecutor();
         connection.addPropertyChangeListener(this);
