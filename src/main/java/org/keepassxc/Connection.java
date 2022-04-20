@@ -115,7 +115,7 @@ public abstract class Connection implements AutoCloseable {
                     log.trace("KeePassXC send an empty response: {}", response);
                     continue;
                 }
-                if (!response.has("success")) break;
+                if (response.has("error")) break;
                 if (response.has("action") && response.getString("action").equals(action)) break;
                 log.trace("Response added to queue: {}", response);
             }
