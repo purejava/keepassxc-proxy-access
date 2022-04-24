@@ -15,8 +15,7 @@ public class WindowsConnection extends Connection {
 
     private static final Logger log = LoggerFactory.getLogger(WindowsConnection.class);
 
-    private RandomAccessFile readPipe;
-    private RandomAccessFile writePipe;
+    private RandomAccessFile pipe;
 
     /**
      * Connect to the KeePassXC proxy via a Windows named pipe the proxy has opened.
@@ -26,9 +25,7 @@ public class WindowsConnection extends Connection {
     @Override
     public void connect() throws IOException {
         try {
-            readPipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
-                    "r");
-            writePipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
+            pipe = new RandomAccessFile("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"),
                     "rw");
         } catch (FileNotFoundException e) {
             log.error("Cannot connect to proxy. Is KeepassXC started?");
@@ -45,7 +42,7 @@ public class WindowsConnection extends Connection {
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
         log.trace("Sending message: {}", msg);
-        writePipe.write(msg.getBytes(StandardCharsets.UTF_8));
+        pipe.write(msg.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -54,7 +51,7 @@ public class WindowsConnection extends Connection {
         var raw = "";
         do {
             try {
-                c = readPipe.read();
+                c = pipe.read();
                 raw += (char) c;
             } catch (IOException e) {
                 log.error(e.toString(), e.getCause());
@@ -72,14 +69,13 @@ public class WindowsConnection extends Connection {
 
     @Override
     protected boolean isConnected() {
-        return null != readPipe && null != writePipe;
+        return null != pipe;
     }
 
     @Override
     public void close() throws Exception {
         messagePublisher.doStop();
         executorService.shutdown();
-        readPipe.close();
-        writePipe.close();
+        pipe.close();
     }
 }
