@@ -32,8 +32,10 @@ public abstract class Connection implements AutoCloseable {
     private static final int nonceLength = 24;
     private byte[] nonce;
 
-    final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    final ExecutorService executorService = Executors.newFixedThreadPool(12);
     protected MessagePublisher messagePublisher;
+    private final long QUEUE_CHECKING_INTERVAL_MS = 100;
+    private final long SLOW_QUEUE_PROCESSING_MS = 500;
     private final ConcurrentLinkedQueue<JSONObject> queue = new ConcurrentLinkedQueue<>();
 
     private final int MAX_ERROR_COUNT = 4;
@@ -76,6 +78,7 @@ public abstract class Connection implements AutoCloseable {
             while (keepRunning()) {
                 var response = getCleartextResponse();
                 if (!response.isEmpty()) {
+                    if (!isSignal(response)) log.trace("Response added to queue: {}", response);
                     queue.offer(response);
                     errorCount = 0;
                 } else {
@@ -105,13 +108,25 @@ public abstract class Connection implements AutoCloseable {
             while (true) {
                 var response = queue.peek();
                 if (null == response) {
-                    Thread.sleep(200);
+                    Thread.sleep(QUEUE_CHECKING_INTERVAL_MS);
                     continue;
                 }
-                if (response.has("error")) break;
-                var qit = queue.iterator();
-                while (qit.hasNext()) {
-                    var message = qit.next();
+                if (isSignal(response)) {
+                    queue.remove(response);
+                    continue;
+                }
+                if (response.toString().equals("{}")) {
+                    queue.remove(response);
+                    log.trace("KeePassXC send an empty response: {}", response);
+                    continue;
+                }
+                for (JSONObject message : queue) {
+                    log.trace("Checking in queue message {}, looking for action '{}' and nonce {}", message, action, b64encode(incrementNonce(nonce)));
+                    if (message.has("error") && message.getString("action").equals(action)) {
+                        queue.remove(message);
+                        log.trace("Found in and retrieved from queue: {}", message);
+                        return message;
+                    }
                     if (message.has("action")
                             && message.getString("action").equals(action)
                             && message.has("nonce")
@@ -121,19 +136,8 @@ public abstract class Connection implements AutoCloseable {
                         return message;
                     }
                 }
-                if (isSignal(response)) {
-                    queue.poll();
-                    continue;
-                }
-                if (response.toString().equals("{}")) {
-                    queue.poll();
-                    log.trace("KeePassXC send an empty response: {}", response);
-                    continue;
-                }
-                log.trace("Response added to queue: {}", response);
+                Thread.sleep(SLOW_QUEUE_PROCESSING_MS);
             }
-            log.trace("Retrieved from queue: {}", queue.peek());
-            return queue.poll();
         }
     }
 
@@ -263,7 +267,14 @@ public abstract class Connection implements AutoCloseable {
         var response = new JSONObject();
 
         try {
-            response = executorService.submit(new MessageConsumer(action, nonce)).get();
+            // associate requires user input, other requests don't
+            if (action.equals("associate")) {
+                response = executorService.submit(new MessageConsumer(action, nonce)).get();
+            } else {
+                response = executorService.submit(new MessageConsumer(action, nonce)).get(1, TimeUnit.SECONDS);
+            }
+        } catch (TimeoutException toe) {
+            throw new KeepassProxyAccessException("Timeout for action '" + action + "'");
         } catch (InterruptedException | ExecutionException e) {
             log.error(e.toString(), e.getCause());
         }
