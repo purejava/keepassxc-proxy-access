@@ -496,7 +496,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
-     * Close the connection to the socket (for Linux and Mac) or the named pip (for Windows) respectively.
+     * Close the connection to the socket (for Linux and Mac) or the named pipe (for Windows) respectively.
      *
      * @return True, in case the connection was closed without an error, false otherwise.
      */
