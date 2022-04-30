@@ -53,8 +53,12 @@ public class WindowsConnection extends Connection {
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
-        log.trace("Sending message: {}", msg);
-        pipe.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)), 0);
+        if (pipe.isOpen()) {
+            log.trace("Sending message: {}", msg);
+            pipe.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)), 0);
+        } else {
+            throw new IOException("Pipe closed");
+        }
     }
 
     @Override

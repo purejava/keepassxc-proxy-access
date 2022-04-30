@@ -57,8 +57,12 @@ public class LinuxMacConnection extends Connection {
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
-        log.trace("Sending message: {}", msg);
-        socket.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)));
+        if (socket.isOpen()) {
+            log.trace("Sending message: {}", msg);
+            socket.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)));
+        } else {
+            throw new IOException("Socket closed");
+        }
     }
 
     @Override
