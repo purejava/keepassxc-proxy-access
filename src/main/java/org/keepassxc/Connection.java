@@ -45,11 +45,17 @@ public abstract class Connection implements AutoCloseable {
     private final long RESPONSE_DELAY_MS = 500;
     private final ScheduledExecutorService scheduler;
 
+    private final int RESPONSE_TIMEOUT_S = 5;
+
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
     private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
     private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
     private final String MISSING_CLASS = "Credentials have not been initialized";
     public final String EXCEPTION_INFO = "Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099";
+
+    private static final Set<String> REQUESTS_WITHOUT_MANUAL_USER_INPUT = Set.of(
+            "change-public-keys","get-databasehash","test-associate","get-database-groups"
+    );
 
     public Connection() {
         byte[] array = new byte[nonceLength];
@@ -267,11 +273,12 @@ public abstract class Connection implements AutoCloseable {
         var response = new JSONObject();
 
         try {
-            // associate requires user input, other requests don't
-            if (action.equals("associate")) {
-                response = executorService.submit(new MessageConsumer(action, nonce)).get();
+            // requests that don't require user input need to receive an answer within
+            // the specified timeout
+            if (REQUESTS_WITHOUT_MANUAL_USER_INPUT.contains(action)) {
+                response = executorService.submit(new MessageConsumer(action, nonce)).get(RESPONSE_TIMEOUT_S, TimeUnit.SECONDS);
             } else {
-                response = executorService.submit(new MessageConsumer(action, nonce)).get(5, TimeUnit.SECONDS);
+                response = executorService.submit(new MessageConsumer(action, nonce)).get();
             }
         } catch (TimeoutException toe) {
             throw new KeepassProxyAccessException("Timeout for action '" + action + "'");
