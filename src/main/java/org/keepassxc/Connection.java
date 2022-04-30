@@ -271,7 +271,7 @@ public abstract class Connection implements AutoCloseable {
             if (action.equals("associate")) {
                 response = executorService.submit(new MessageConsumer(action, nonce)).get();
             } else {
-                response = executorService.submit(new MessageConsumer(action, nonce)).get(1, TimeUnit.SECONDS);
+                response = executorService.submit(new MessageConsumer(action, nonce)).get(5, TimeUnit.SECONDS);
             }
         } catch (TimeoutException toe) {
             throw new KeepassProxyAccessException("Timeout for action '" + action + "'");
