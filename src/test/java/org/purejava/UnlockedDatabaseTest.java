@@ -23,7 +23,7 @@ public class UnlockedDatabaseTest {
     @Test
     @Order(3)
     @DisplayName("Testing KeePassXC proxy functionality")
-    public void shouldHaveNoErrors() throws InterruptedException {
+    public void shouldHaveNoErrors() throws Exception {
         log.info("Please enter a name for the connection in the pop-up within 10 seconds");
         assertTrue(kpa.connect());
         // TODO:
@@ -52,5 +52,6 @@ public class UnlockedDatabaseTest {
         assertTrue(kpa.deleteEntry("2aafee1a89fd435c8bad7df12bbaaa3e"));
         log.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
+        assertTrue(kpa.closeConnection());
     }
 }

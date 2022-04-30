@@ -120,13 +120,13 @@ public class LinuxMacConnection extends Connection {
 
     @Override
     protected boolean isConnected() {
-        return null!= socket && socket.isOpen();
+        return null != socket && socket.isOpen();
     }
 
     @Override
     public void close() throws Exception {
-        messagePublisher.doStop();
+        if (null != messagePublisher) messagePublisher.doStop();
         executorService.shutdown();
-        socket.close();
+        if (isConnected()) socket.close();
     }
 }

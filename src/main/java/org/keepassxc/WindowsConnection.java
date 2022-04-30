@@ -87,13 +87,13 @@ public class WindowsConnection extends Connection {
 
     @Override
     protected boolean isConnected() {
-        return null != pipe;
+        return null != pipe && pipe.isOpen();
     }
 
     @Override
     public void close() throws Exception {
-        messagePublisher.doStop();
+        if (null != messagePublisher) messagePublisher.doStop();
         executorService.shutdown();
-        pipe.close();
+        if (isConnected()) pipe.close();
     }
 }

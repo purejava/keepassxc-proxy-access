@@ -56,8 +56,14 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
         scheduler = Executors.newSingleThreadScheduledExecutor();
         connection.addPropertyChangeListener(this);
-        Runtime.getRuntime().addShutdownHook(new Thread(() ->
-                connection.removePropertyChangeListener(this)
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                connection.removePropertyChangeListener(this);
+            try {
+                closeConnection();
+            } catch (Exception e) {
+                log.error(e.toString(), e.getCause());
+            }
+        }
         ));
         connection.setCredentials(loadCredentials());
     }
@@ -487,6 +493,21 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     public String getAssociateId() {
         return connection.getAssociateId();
+    }
+
+    /**
+     * Close the connection to the socket (for Linux and Mac) or the named pip (for Windows) respectively.
+     *
+     * @return True, in case the connection was closed without an error, false otherwise.
+     */
+    public boolean closeConnection() {
+        try {
+            connection.close();
+            return true;
+        } catch (Exception e) {
+            log.error(e.toString(), e.getCause());
+            return false;
+        }
     }
 
     /**

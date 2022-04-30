@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test is designed to run within CI, where a KeePassXC database is not available.
@@ -17,5 +18,6 @@ public class KeepassProxyAccessTest {
     @DisplayName("Testing availability of a socket to KeePassXC")
     public void shouldHaveNoErrors() {
         assertFalse(kpa.connect());
+        assertTrue(kpa.closeConnection());
     }
 }
