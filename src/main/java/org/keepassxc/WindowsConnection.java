@@ -91,6 +91,11 @@ public class WindowsConnection extends Connection {
     }
 
     @Override
+    public void terminateConnection() throws IOException {
+        if (isConnected()) pipe.close();
+    }
+
+    @Override
     public void close() throws Exception {
         if (null != messagePublisher) messagePublisher.doStop();
         executorService.shutdown();

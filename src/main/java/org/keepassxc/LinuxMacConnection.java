@@ -124,6 +124,11 @@ public class LinuxMacConnection extends Connection {
     }
 
     @Override
+    public void terminateConnection() throws IOException {
+        if (isConnected()) socket.close();
+    }
+
+    @Override
     public void close() throws Exception {
         if (null != messagePublisher) messagePublisher.doStop();
         executorService.shutdown();

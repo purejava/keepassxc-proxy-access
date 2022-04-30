@@ -52,6 +52,6 @@ public class UnlockedDatabaseTest {
         assertTrue(kpa.deleteEntry("2aafee1a89fd435c8bad7df12bbaaa3e"));
         log.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
-        assertTrue(kpa.closeConnection());
+        assertTrue(kpa.shutdown());
     }
 }

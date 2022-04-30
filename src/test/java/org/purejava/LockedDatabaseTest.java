@@ -18,6 +18,6 @@ public class LockedDatabaseTest {
     public void shouldHaveNoErrors() {
         assertTrue(kpa.connect());
         assertTrue(kpa.getDatabasehash().isEmpty());
-        assertTrue(kpa.closeConnection());
+        assertTrue(kpa.shutdown());
     }
 }

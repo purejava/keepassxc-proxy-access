@@ -92,6 +92,11 @@ public abstract class Connection implements AutoCloseable {
                     if (errorCount > MAX_ERROR_COUNT) {
                         log.info("Too much errors - stopping MessagePublisher");
                         doStop();
+                        try {
+                            terminateConnection();
+                        } catch (IOException e) {
+                            log.error(e.toString(), e.getCause());
+                        }
                         reconnect();
                     }
                 }
@@ -714,6 +719,8 @@ public abstract class Connection implements AutoCloseable {
     }
 
     protected abstract boolean isConnected();
+
+    public abstract void terminateConnection() throws IOException;
 
     @Override
     public abstract void close() throws Exception;

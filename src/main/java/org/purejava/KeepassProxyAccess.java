@@ -59,7 +59,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 connection.removePropertyChangeListener(this);
             try {
-                closeConnection();
+                shutdown();
             } catch (Exception e) {
                 log.error(e.toString(), e.getCause());
             }
@@ -496,15 +496,31 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
+     * Shut down the application and close the connection to the socket (for Linux and Mac)
+     * or the named pipe (for Windows) respectively.
+     *
+     * @return True, in case the connection was shut down without an error, false otherwise.
+     */
+    public boolean shutdown() {
+        try {
+            connection.close();
+            return true;
+        } catch (Exception e) {
+            log.error(e.toString(), e.getCause());
+            return false;
+        }
+    }
+
+    /**
      * Close the connection to the socket (for Linux and Mac) or the named pipe (for Windows) respectively.
      *
      * @return True, in case the connection was closed without an error, false otherwise.
      */
     public boolean closeConnection() {
         try {
-            connection.close();
+            connection.terminateConnection();
             return true;
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error(e.toString(), e.getCause());
             return false;
         }

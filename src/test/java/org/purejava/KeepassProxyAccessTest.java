@@ -18,6 +18,6 @@ public class KeepassProxyAccessTest {
     @DisplayName("Testing availability of a socket to KeePassXC")
     public void shouldHaveNoErrors() {
         assertFalse(kpa.connect());
-        assertTrue(kpa.closeConnection());
+        assertTrue(kpa.shutdown());
     }
 }
