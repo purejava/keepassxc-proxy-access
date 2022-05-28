@@ -67,6 +67,10 @@ public abstract class Connection implements AutoCloseable {
         scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
+    /**
+     * The MessagePublisher listens on the connection to the KeePassXC database and adds messages
+     * received to a queue.
+     */
     class MessagePublisher implements Runnable {
         private boolean doStop = false;
         private int errorCount = 0;
@@ -109,6 +113,14 @@ public abstract class Connection implements AutoCloseable {
         private final String action;
         private final byte[] nonce;
 
+        /**
+         * Check the queue of messages from the KeePassXC database for a message with a given action and nonce,
+         * which is the answer to a request sent before and return the message.
+         *
+         * @param action We are searching for a message with a certain action and
+         * @param nonce  a certain nonce.
+         * @return The message that was looked up.
+         */
         public MessageConsumer(String action, byte[] nonce) {
             this.action = action;
             this.nonce = nonce;
@@ -720,8 +732,18 @@ public abstract class Connection implements AutoCloseable {
 
     protected abstract boolean isConnected();
 
+    /**
+     * Closes the socket or named pipe respectively.
+     *
+     * @throws IOException If an I/O error occurred.
+     */
     public abstract void terminateConnection() throws IOException;
 
+    /**
+     * Closes the socket or named pipe respectively and shuts down the application.
+     *
+     * @throws Exception Something went wrong.
+     */
     @Override
     public abstract void close() throws Exception;
 }
