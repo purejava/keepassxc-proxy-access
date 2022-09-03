@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class WindowsConnection extends Connection {
@@ -65,8 +66,11 @@ public class WindowsConnection extends Connection {
     protected JSONObject getCleartextResponse() {
         var raw = new StringBuilder();
         long position = 0;
-        Future<Integer> operation = pipe.read(buffer, position);
-        while (!operation.isDone());
+        try {
+            pipe.read(buffer, position).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error(e.toString(), e.getCause());
+        }
         buffer.flip();
         charsetDecoder.decode(buffer, charBuffer, true);
         charBuffer.flip();
