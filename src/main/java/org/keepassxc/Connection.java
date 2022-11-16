@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public abstract class Connection implements AutoCloseable {
 
-    private static final Logger log = LoggerFactory.getLogger(Connection.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Connection.class);
     private final PropertyChangeSupport support;
 
     private TweetNaclFast.Box box;
@@ -48,10 +48,10 @@ public abstract class Connection implements AutoCloseable {
     private final int RESPONSE_TIMEOUT_S = 5;
 
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
-    private final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
-    private final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
-    private final String MISSING_CLASS = "Credentials have not been initialized";
-    public final String EXCEPTION_INFO = "Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099";
+    private static final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
+    private static final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
+    private static final String MISSING_CLASS = "Credentials have not been initialized";
+    public static final String EXCEPTION_INFO = "Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099";
 
     private static final Set<String> REQUESTS_WITHOUT_MANUAL_USER_INPUT = Set.of(
             "change-public-keys","get-databasehash","test-associate","get-database-groups"
@@ -88,24 +88,24 @@ public abstract class Connection implements AutoCloseable {
             while (keepRunning()) {
                 var response = getCleartextResponse();
                 if (!response.isEmpty()) {
-                    if (!isSignal(response)) log.trace("Response added to queue: {}", response);
+                    if (!isSignal(response)) LOG.trace("Response added to queue: {}", response);
                     queue.offer(response);
                     errorCount = 0;
                 } else {
                     errorCount++;
                     if (errorCount > MAX_ERROR_COUNT) {
-                        log.info("Too much errors - stopping MessagePublisher");
+                        LOG.info("Too much errors - stopping MessagePublisher");
                         doStop();
                         try {
                             terminateConnection();
                         } catch (IOException e) {
-                            log.error(e.toString(), e.getCause());
+                            LOG.error(e.toString(), e.getCause());
                         }
                         reconnect();
                     }
                 }
             }
-            log.debug("MessagePublisher stopped");
+            LOG.debug("MessagePublisher stopped");
         }
     }
 
@@ -119,7 +119,6 @@ public abstract class Connection implements AutoCloseable {
          *
          * @param action We are searching for a message with a certain action and
          * @param nonce  a certain nonce.
-         * @return The message that was looked up.
          */
         public MessageConsumer(String action, byte[] nonce) {
             this.action = action;
@@ -140,14 +139,14 @@ public abstract class Connection implements AutoCloseable {
                 }
                 if (response.toString().equals("{}")) {
                     queue.remove(response);
-                    log.trace("KeePassXC send an empty response: {}", response);
+                    LOG.trace("KeePassXC send an empty response: {}", response);
                     continue;
                 }
                 for (JSONObject message : queue) {
-                    log.trace("Checking in queue message {}, looking for action '{}' and nonce {}", message, action, b64encode(incrementNonce(nonce)));
+                    LOG.trace("Checking in queue message {}, looking for action '{}' and nonce {}", message, action, b64encode(incrementNonce(nonce)));
                     if (message.has("error") && message.getString("action").equals(action)) {
                         queue.remove(message);
-                        log.trace("Found in and retrieved from queue: {}", message);
+                        LOG.trace("Found in and retrieved from queue: {}", message);
                         return message;
                     }
                     if (message.has("action")
@@ -155,7 +154,7 @@ public abstract class Connection implements AutoCloseable {
                             && message.has("nonce")
                             && message.getString("nonce").equals(b64encode(incrementNonce(nonce)))) {
                         queue.remove(message);
-                        log.trace("Retrieved from queue: {}", message);
+                        LOG.trace("Retrieved from queue: {}", message);
                         return message;
                     }
                 }
@@ -166,7 +165,7 @@ public abstract class Connection implements AutoCloseable {
 
     void lauchMessagePublisher() {
         messagePublisher = new MessagePublisher();
-        log.debug("MessagePublisher started");
+        LOG.debug("MessagePublisher started");
         executorService.execute(messagePublisher);
     }
 
@@ -255,7 +254,7 @@ public abstract class Connection implements AutoCloseable {
         }
 
         var strMsg = jsonTxt(msg);
-        log.trace("Send - encrypting the following message: {}", strMsg);
+        LOG.trace("Send - encrypting the following message: {}", strMsg);
 
         box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
         nonce = ramdomGenerateNonce();
@@ -300,7 +299,7 @@ public abstract class Connection implements AutoCloseable {
         } catch (TimeoutException toe) {
             throw new KeepassProxyAccessException("Timeout for action '" + action + "'");
         } catch (InterruptedException | ExecutionException e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
         }
 
         if (response.has("error")) {
@@ -315,7 +314,7 @@ public abstract class Connection implements AutoCloseable {
         }
 
         var decrypted = new String(bMessage, StandardCharsets.UTF_8);
-        log.trace("Decrypted message: {}", decrypted);
+        LOG.trace("Decrypted message: {}", decrypted);
         var decryptedResponse = new JSONObject(decrypted);
 
         if (!decryptedResponse.has("success")) {
@@ -352,7 +351,7 @@ public abstract class Connection implements AutoCloseable {
         try {
             response = executorService.submit(new MessageConsumer("change-public-keys", nonce)).get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
         }
 
         if (!response.has("success")) {
@@ -400,7 +399,7 @@ public abstract class Connection implements AutoCloseable {
             try {
                 response = getEncryptedResponseAndDecrypt("associate", nonce);
             } catch (KeepassProxyAccessException e) {
-                log.error(e.toString(), e.getCause());
+                LOG.error(e.toString(), e.getCause());
             }
             assert response != null;
             credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));

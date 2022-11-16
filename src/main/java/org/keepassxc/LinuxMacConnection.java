@@ -19,11 +19,11 @@ import java.nio.charset.StandardCharsets;
 
 public class LinuxMacConnection extends Connection {
 
-    private static final Logger log = LoggerFactory.getLogger(LinuxMacConnection.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LinuxMacConnection.class);
 
     private final int BUFFER_SIZE = 1024;
     private SocketChannel socket;
-    private UnixDomainSocketAddress socketAddress;
+    private final UnixDomainSocketAddress socketAddress;
     private final ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
     private final Charset charset = StandardCharsets.UTF_8;
     private final CharsetDecoder charsetDecoder = charset.newDecoder();
@@ -48,21 +48,21 @@ public class LinuxMacConnection extends Connection {
         try {
             socket = SocketChannel.open(socketAddress);
         } catch (IOException e) {
-            log.error("Cannot connect to proxy. Is KeepassXC started?");
+            LOG.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
         }
         try {
             lauchMessagePublisher();
             changePublicKeys();
         } catch (KeepassProxyAccessException e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
         }
     }
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
         if (socket.isOpen()) {
-            log.trace("Sending message: {}", msg);
+            LOG.trace("Sending message: {}", msg);
             socket.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)));
         } else {
             throw new IOException("Socket closed");
@@ -76,7 +76,7 @@ public class LinuxMacConnection extends Connection {
             try {
                 if (socket.read(buffer) == -1) break;
             } catch (IOException e) {
-                log.error(e.toString(), e.getCause());
+                LOG.error(e.toString(), e.getCause());
                 return new JSONObject();
             }
             buffer.flip();
@@ -91,14 +91,14 @@ public class LinuxMacConnection extends Connection {
                 charBuffer.clear();
             }
         }
-        log.trace("Reading message: {}", raw);
+        LOG.trace("Reading message: {}", raw);
         try {
             var s = raw.toString();
             // Test, if we received more than one message with the last read
             if (s.length() - s.replace("}", "").length() > 1) throw new JSONException("");
             return new JSONObject(raw.toString());
         } catch (JSONException e) {
-            log.error("Message corrupted. Received: {}", raw);
+            LOG.error("Message corrupted. Received: {}", raw);
             return new JSONObject();
         }
     }
@@ -119,11 +119,11 @@ public class LinuxMacConnection extends Connection {
                         return getXDGPath();
                     }
                     case Flatpak -> {
-                        log.debug("Using XDG_RUNTIME_DIR" + FLATPAK_PATH);
+                        LOG.debug("Using XDG_RUNTIME_DIR" + FLATPAK_PATH);
                         return System.getenv("XDG_RUNTIME_DIR") + FLATPAK_PATH;
                     }
                     case Snap -> {
-                        log.debug("Using " + SNAP_PATH);
+                        LOG.debug("Using " + SNAP_PATH);
                         return SNAP_PATH;
                     }
                 }
@@ -147,19 +147,19 @@ public class LinuxMacConnection extends Connection {
      */
     private String getXDGPath() {
         var path = System.getenv("XDG_RUNTIME_DIR");
-        log.debug("Checking if XDG_RUNTIME_DIR exists ...");
+        LOG.debug("Checking if XDG_RUNTIME_DIR exists ...");
         if (null == path) {
-            log.debug("Unable to find XDG_RUNTIME_DIR");
+            LOG.debug("Unable to find XDG_RUNTIME_DIR");
             path = System.getenv("TMPDIR");
-            log.debug("Using TEMPDIR");
+            LOG.debug("Using TEMPDIR");
             return (null == path) ? "/tmp" : path;
         } else {
             var flatpakPath = new File(path + FLATPAK_PATH);
             if (flatpakPath.exists()) {
-                log.debug("Using XDG_RUNTIME_DIR" + FLATPAK_PATH);
+                LOG.debug("Using XDG_RUNTIME_DIR" + FLATPAK_PATH);
                 return path + FLATPAK_PATH;
             } else {
-                log.debug("Using XDG_RUNTIME_DIR");
+                LOG.debug("Using XDG_RUNTIME_DIR");
                 return path;
             }
         }

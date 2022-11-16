@@ -17,11 +17,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 public class WindowsConnection extends Connection {
 
-    private static final Logger log = LoggerFactory.getLogger(WindowsConnection.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WindowsConnection.class);
 
     private final int BUFFER_SIZE = 8192;
     private AsynchronousFileChannel pipe;
@@ -41,21 +40,21 @@ public class WindowsConnection extends Connection {
             Path path = Paths.get("\\\\.\\pipe\\" + PROXY_NAME + "_" + System.getenv("USERNAME"));
             pipe = AsynchronousFileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE);
         } catch (IOException e) {
-            log.error("Cannot connect to proxy. Is KeepassXC started?");
+            LOG.error("Cannot connect to proxy. Is KeepassXC started?");
             throw e;
         }
         try {
             lauchMessagePublisher();
             changePublicKeys();
         } catch (KeepassProxyAccessException e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
         }
     }
 
     @Override
     protected void sendCleartextMessage(String msg) throws IOException {
         if (pipe.isOpen()) {
-            log.trace("Sending message: {}", msg);
+            LOG.trace("Sending message: {}", msg);
             pipe.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)), 0);
         } else {
             throw new IOException("Pipe closed");
@@ -69,7 +68,7 @@ public class WindowsConnection extends Connection {
         try {
             pipe.read(buffer, position).get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
         }
         buffer.flip();
         charsetDecoder.decode(buffer, charBuffer, true);
@@ -77,14 +76,14 @@ public class WindowsConnection extends Connection {
         raw.append(charBuffer);
         buffer.compact();
         charBuffer.clear();
-        log.trace("Reading message: {}", raw);
+        LOG.trace("Reading message: {}", raw);
         try {
             var s = raw.toString();
             // Test, if we received more than one message with the last read
             if (s.length() - s.replace("}", "").length() > 1) throw new JSONException("");
             return new JSONObject(raw.toString());
         } catch (JSONException e) {
-            log.error("Message corrupted. Received: {}", raw);
+            LOG.error("Message corrupted. Received: {}", raw);
             return new JSONObject();
         }
     }

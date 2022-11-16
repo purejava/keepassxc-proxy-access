@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class KeepassProxyAccess implements PropertyChangeListener {
-    private static final Logger log = LoggerFactory.getLogger(KeepassProxyAccess.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KeepassProxyAccess.class);
 
     private Connection connection;
     private String fileLocation;
@@ -61,7 +61,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             try {
                 shutdown();
             } catch (Exception e) {
-                log.error(e.toString(), e.getCause());
+                LOG.error(e.toString(), e.getCause());
             }
         }
         ));
@@ -81,7 +81,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             var c = (Credentials) objIs.readObject();
             return Optional.of(c);
         } catch (IOException | ClassNotFoundException e) {
-            log.debug("Credentials could not be read from disc");
+            LOG.debug("Credentials could not be read from disc");
             return Optional.empty();
         }
     }
@@ -96,7 +96,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      */
     private void scheduleSave(Optional<Credentials> credentials) {
         if (credentials.isEmpty()) {
-            log.debug("Credentials are not present and won't be saved");
+            LOG.debug("Credentials are not present and won't be saved");
             return;
         }
         Runnable saveCommand = () -> this.saveCredentials(credentials);
@@ -114,7 +114,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @param credentials An Optional of the Credentials to be saved.
      */
     private void saveCredentials(Optional<Credentials> credentials) {
-        log.debug("Attempting to save credentials");
+        LOG.debug("Attempting to save credentials");
         try {
             var path = Path.of(fileLocation);
             Files.createDirectories(path.getParent());
@@ -125,10 +125,10 @@ public class KeepassProxyAccess implements PropertyChangeListener {
                 objOps.flush();
             }
             Files.move(tmpPath, path, StandardCopyOption.REPLACE_EXISTING);
-            log.debug("Credentials saved");
+            LOG.debug("Credentials saved");
         } catch (IOException e) {
-            log.error("Credentials could not be saved to disc");
-            log.error(e.toString(), e.getCause());
+            LOG.error("Credentials could not be saved to disc");
+            LOG.error(e.toString(), e.getCause());
         }
     }
 
@@ -174,7 +174,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             // TODO:
             //  This never returns true as long as the workaround is in place, because
             //  Connection#associate() throws a KeepassProxyAccessException on associating
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return false;
         }
     }
@@ -209,7 +209,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.testAssociate(id, key);
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return false;
         }
     }
@@ -233,7 +233,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
                 default -> "";
             };
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return "";
         }
     }
@@ -252,7 +252,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getLogins(url, submitUrl, httpAuth, list).toMap();
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return Map.of();
         }
     }
@@ -305,7 +305,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             var response = connection.setLogin(url, submitUrl, id, login, password, group, groupUuid, uuid);
             return response.has("success") && response.getString("success").equals("true");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return false;
         }
     }
@@ -319,7 +319,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getDatabaseGroups();
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return new JSONObject();
         }
     }
@@ -338,7 +338,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
                 return response.getJSONArray("entries").getJSONObject(0).getString("password");
             }
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return "";
         }
     }
@@ -353,7 +353,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.lockDatabase();
             return true;
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return false;
         }
     }
@@ -371,7 +371,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return getNewGroupId(connection.createNewGroup(path));
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return Map.of();
         }
     }
@@ -387,7 +387,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         try {
             return connection.getTotp(uuid).getString("totp");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return "";
         }
     }
@@ -403,7 +403,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             var response = connection.deleteEntry(uuid);
             return response.has("success") && response.getString("success").equals("true");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return false;
         }
     }
@@ -419,7 +419,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             var response = connection.requestAutotype(url);
             return response.has("success") && response.getString("success").equals("true");
         } catch (IOException | IllegalStateException | KeepassProxyAccessException | JSONException e) {
-            log.info(e.toString(), e.getCause());
+            LOG.info(e.toString(), e.getCause());
             return false;
         }
     }
@@ -506,7 +506,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.close();
             return true;
         } catch (Exception e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
             return false;
         }
     }
@@ -521,7 +521,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             connection.terminateConnection();
             return true;
         } catch (IOException e) {
-            log.error(e.toString(), e.getCause());
+            LOG.error(e.toString(), e.getCause());
             return false;
         }
     }
