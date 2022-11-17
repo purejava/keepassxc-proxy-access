@@ -8,7 +8,7 @@ import java.util.Optional;
 public class KindOfKeePassXC {
     private static final Logger LOG = LoggerFactory.getLogger(KindOfKeePassXC.class);
 
-    static Optional<KeePassXCType> determineType() {
+    public static Optional<KeePassXCType> determineType() {
         var processHandle = ProcessHandle.allProcesses()
                 .filter(ph -> ph.info().command().isPresent() && ph.info().command().get().contains("KeePassXC"))
                 .findFirst();
