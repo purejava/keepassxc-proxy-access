@@ -9,33 +9,44 @@ public class KindOfKeePassXC {
     private static final Logger LOG = LoggerFactory.getLogger(KindOfKeePassXC.class);
 
     public static Optional<KeePassXCType> determineType() {
+        ///home/<user>/Downloads/KeePassXC-2.7.4-x86_64.AppImage
         var processHandle = ProcessHandle.allProcesses()
-                .filter(ph -> ph.info().command().isPresent() && ph.info().command().get().contains("KeePassXC"))
+                .filter(ph -> ph.info().command().isPresent() && ph.info().command().get().contains("KeePassXC")
+                        && ph.info().command().get().contains("AppImage"))
                 .findFirst();
 
-        ///home/<user>/Downloads/KeePassXC-2.7.4-x86_64.AppImage
-        if (processHandle.isPresent() && processHandle.get().info().command().get().contains("AppImage")) {
+        if (processHandle.isPresent()) {
             LOG.debug("Found running KeePassXC AppImage");
             return Optional.of(KeePassXCType.AppImage);
         }
 
+        ///usr/bin/bwrap --args 38 keepassxc-wrapper
         processHandle = ProcessHandle.allProcesses()
-                .filter(ph -> ph.info().commandLine().isPresent() && ph.info().commandLine().get().contains("keepassxc"))
+                .filter(ph -> ph.info().commandLine().isPresent() && ph.info().commandLine().get().contains("keepassxc")
+                        && ph.info().commandLine().get().contains("bwrap"))
                 .findFirst();
 
-        ///usr/bin/bwrap --args 38 keepassxc-wrapper
-        if (processHandle.isPresent() && processHandle.get().info().commandLine().get().contains("bwrap")) {
+        if (processHandle.isPresent()) {
             LOG.debug("Found running KeePassXC installed via Flatpak");
             return Optional.of(KeePassXCType.Flatpak);
         }
 
         ///snap/keepassxc/1645/usr/bin/keepassxc
-        if (processHandle.isPresent() && processHandle.get().info().commandLine().get().contains("snap")) {
+        processHandle = ProcessHandle.allProcesses()
+                .filter(ph -> ph.info().commandLine().isPresent() && ph.info().commandLine().get().contains("keepassxc")
+                        && ph.info().commandLine().get().contains("snap"))
+                .findFirst();
+
+        if (processHandle.isPresent())  {
             LOG.debug("Found running KeePassXC installed via Snap");
             return Optional.of(KeePassXCType.Snap);
         }
 
         ///usr/bin/keepassxc, gets started as "keepassxc"
+        processHandle = ProcessHandle.allProcesses()
+                .filter(ph -> ph.info().commandLine().isPresent() && ph.info().commandLine().get().contains("keepassxc"))
+                .findFirst();
+
         if (processHandle.isPresent()) {
             LOG.debug("Found running KeePassXC installed from repository");
             return Optional.of(KeePassXCType.Repo);
