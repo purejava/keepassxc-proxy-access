@@ -35,8 +35,8 @@ public class KindOfKeePassXC {
             return Optional.of(KeePassXCType.Snap);
         }
 
-        ///usr/bin/keepassxc
-        if (processHandle.isPresent() && processHandle.get().info().commandLine().get().contains("bin")) {
+        ///usr/bin/keepassxc, gets started as "keepassxc"
+        if (processHandle.isPresent()) {
             LOG.debug("Found running KeePassXC installed from repository");
             return Optional.of(KeePassXCType.Repo);
         }
