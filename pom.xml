@@ -26,7 +26,7 @@
         <developer>
             <name>Ralph Plawetzki</name>
             <email>ralph@purejava.org</email>
-            <organization></organization>
+            <organization/>
             <organizationUrl>https://github.com/purejava</organizationUrl>
         </developer>
     </developers>
@@ -43,10 +43,10 @@
         <maven.compiler.target>1.9</maven.compiler.target>
 
         <tweetnacl.version>1.1.2</tweetnacl.version>
-        <json.version>20220320</json.version>
+        <json.version>20220924</json.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
-        <junit.version>5.8.2</junit.version>
-        <slf4j.version>1.7.36</slf4j.version>
+        <junit.version>5.9.1</junit.version>
+        <slf4j.version>2.0.3</slf4j.version>
     </properties>
 
     <dependencies>
@@ -257,25 +257,13 @@
                     <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.6.8</version>
+                        <version>1.6.13</version>
                         <extensions>true</extensions>
                         <configuration>
                             <serverId>ossrh</serverId>
                             <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
                             <autoReleaseAfterClose>false</autoReleaseAfterClose>
                         </configuration>
-                        <dependencies>
-                            <!--
-                              TODO:
-                                Remove after OSSRH-66257, NEXUS-26993 are fixed,
-                                possibly via https://github.com/sonatype/nexus-maven-plugins/pull/91
-                            -->
-                            <dependency>
-                                <groupId>com.thoughtworks.xstream</groupId>
-                                <artifactId>xstream</artifactId>
-                                <version>1.4.15</version>
-                            </dependency>
-                        </dependencies>
                     </plugin>
                 </plugins>
             </build>
