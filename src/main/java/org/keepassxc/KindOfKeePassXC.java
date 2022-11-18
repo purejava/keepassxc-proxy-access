@@ -1,14 +1,22 @@
 package org.keepassxc;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+/**
+ * Utility class to determine the kind of the KeePassXC installation on Linux
+ */
 public class KindOfKeePassXC {
     private static final Logger LOG = LoggerFactory.getLogger(KindOfKeePassXC.class);
 
     public static Optional<KeePassXCType> determineType() {
+        if (!SystemUtils.IS_OS_LINUX) {
+            return Optional.empty();
+        }
+
         ///home/<user>/Downloads/KeePassXC-2.7.4-x86_64.AppImage
         var processHandle = ProcessHandle.allProcesses()
                 .filter(ph -> ph.info().command().isPresent() && ph.info().command().get().contains("KeePassXC")
