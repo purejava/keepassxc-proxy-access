@@ -683,8 +683,13 @@ public abstract class Connection implements AutoCloseable {
     private byte[] incrementNonce(byte[] nonce) {
         var c = 1;
         byte[] incrementedNonce = nonce.clone();
-        c += incrementedNonce[0];
-        incrementedNonce[0] = (byte) c;
+
+        for (int i = 0; i < nonce.length; i++) {
+            c += (incrementedNonce[i] & 0xFF /*treat as unsigned*/);
+            incrementedNonce[i] = (byte) c;
+            c >>= 8;
+        }
+
         return incrementedNonce;
     }
 
