@@ -14,6 +14,7 @@ updates:
       maven-build-plugins:
         patterns:
           - "org.apache.maven.plugins:*"
+          - "org.sonatype.plugins:*"
       java-production-dependencies:
         patterns:
           - "*"
@@ -21,6 +22,7 @@ updates:
           - "org.openjfx:*"
           - "org.apache.maven.plugins:*"
           - "org.junit.jupiter:*"
+          - "org.sonatype.plugins:*"
 
   - package-ecosystem: "github-actions"
     directory: "/" # even for `.github/workflows`
