@@ -50,6 +50,7 @@ public class UnlockedDatabaseTest {
         assertTrue(kpa.requestAutotype("https://github.com"));
         LOG.info("Please allow to delete entry");
         assertTrue(kpa.deleteEntry("2aafee1a89fd435c8bad7df12bbaaa3e"));
+        LOG.info(kpa.passkeysRegister("publicKey", "https://www.passkeys.io", l));
         LOG.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
         assertTrue(kpa.shutdown());

@@ -655,6 +655,28 @@ public abstract class Connection implements AutoCloseable {
 
     }
 
+    public JSONObject passkeysRegister(String publicKey, String origin, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
+        var array = new JSONArray();
+        // Syntax check for list
+        for (Map<String, String> m : list) {
+            var o = new JSONObject(m);
+            if (!(o.has("id") && o.has("key") && o.length() == 2)) {
+                throw new KeepassProxyAccessException("JSON object key is malformed");
+            }
+            array.put(m);
+        }
+
+        // Send passkeys-register request
+        var nonce = sendEncryptedMessage(Map.of(
+                "action", "passkeys-register",
+                "publicKey", ensureNotNull(publicKey),
+                "origin", ensureNotNull(origin),
+                "keys", array
+        ));
+        return getEncryptedResponseAndDecrypt("passkeys-register", nonce);
+
+    }
+
     /**
      * Get a String representation of the JSON object.
      *
