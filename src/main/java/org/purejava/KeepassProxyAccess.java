@@ -424,12 +424,12 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
-    public String passkeysRegister(String publicKey, String origin, List<Map<String, String>> list) {
+    public String passkeysRegister(JSONObject publicKey, String origin, List<Map<String, String>> list) {
         try {
             var response = connection.passkeysRegister(publicKey, origin, list);
             if (response.has("response") && response.has("success") && response.getString("success").equals("true")) {
                 try {
-                    var errorCode = response.getJSONObject("response").getString("errorCode");
+                    var errorCode = response.getJSONObject("response").getInt("errorCode");
                     throw new KeepassProxyAccessException("ErrorCode: " + errorCode);
 
                 } catch (JSONException e) {

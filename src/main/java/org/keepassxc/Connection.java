@@ -655,7 +655,7 @@ public abstract class Connection implements AutoCloseable {
 
     }
 
-    public JSONObject passkeysRegister(String publicKey, String origin, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
+    public JSONObject passkeysRegister(JSONObject publicKey, String origin, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
         var array = new JSONArray();
         // Syntax check for list
         for (Map<String, String> m : list) {
@@ -669,7 +669,7 @@ public abstract class Connection implements AutoCloseable {
         // Send passkeys-register request
         var nonce = sendEncryptedMessage(Map.of(
                 "action", "passkeys-register",
-                "publicKey", ensureNotNull(publicKey),
+                "publicKey", publicKey,
                 "origin", ensureNotNull(origin),
                 "keys", array
         ));
