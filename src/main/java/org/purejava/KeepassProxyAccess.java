@@ -424,6 +424,26 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
+    /**
+     * Request passkeys-register from the KeePassXC database (KeePassXC 2.8.0 and newer).
+     * @param publicKey An object containing all required information for the public key.
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API">Web Authentication API</a> for publicKey contents.
+     * @param origin    The origin the request originates from in the form {@code https://...}
+     * @param list      A list of pairs of associateID and IDKeyPublicKey stored on association.
+     * @return An object that contains the result of the operation. In case the Passkey could be registered, the response
+     *         looks like <pre>{@code "response": {
+     *         "authenticatorAttachment": "platform",
+     *         "id": "0iZ6ZoeTM0Kb9MYlH-JnKX8Ui5VrOEd_No42XDh-0D4",
+     *         "response": {
+     *             "attestationObject": "o2Nm...",
+     *             "clientDataJSON": "eyJj..."
+     *         },
+     *         "type": "public-key"
+     * }}</pre>
+     * In case the registration failed, the response looks like <pre>{@code "response": {
+     *         "errorCode": 20
+     * }}</pre>
+     */
     public JSONObject passkeysRegister(JSONObject publicKey, String origin, List<Map<String, String>> list) {
         try {
             var response = connection.passkeysRegister(publicKey, origin, list);
