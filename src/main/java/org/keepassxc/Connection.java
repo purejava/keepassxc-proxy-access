@@ -47,6 +47,31 @@ public abstract class Connection implements AutoCloseable {
 
     private final int RESPONSE_TIMEOUT_S = 5;
 
+    private enum Message {
+        SET_LOGIN("set-login"),
+        GET_LOGINS("get-logins"),
+        GENERATE_PASSWORD("generate-password"),
+        ASSOCIATE("associate"),
+        TEST_ASSOCIATE("test-associate"),
+        GET_DATABASE_HASH("get-databasehash"),
+        CHANGE_PUBLIC_KEYS("change-public-keys"),
+        LOCK_DATABASE("lock-database"),
+        DATABASE_LOCKED("database-locked"),
+        DATABASE_UNLOCKED("database-unlocked"),
+        GET_DATABASE_GROUPS("get-database-groups"),
+        CREATE_NEW_GROUP("create-new-group"),
+        GET_TOTP("get-totp"),
+        REQUEST_AUTOTYPE("request-autotype"),
+        PASSKEYS_REGISTER("passkeys-register"),
+        PASSKEYS_GET("passkeys-get"),
+        DELETE_ENTRY("delete-entry");
+
+        public final String action;
+
+        Message(String action) {
+            this.action = action;
+        }
+    }
     protected final String PROXY_NAME = "org.keepassxc.KeePassXC.BrowserServer";
     private static final String NOT_CONNECTED = "Not connected to KeePassXC. Call connect().";
     private static final String KEYEXCHANGE_MISSING = "Public keys need to be exchanged. Call changePublicKeys().";
@@ -54,7 +79,7 @@ public abstract class Connection implements AutoCloseable {
     public static final String EXCEPTION_INFO = "Delaying association dialog response lookup due to https://github.com/keepassxreboot/keepassxc/issues/7099";
 
     private static final Set<String> REQUESTS_WITHOUT_MANUAL_USER_INPUT = Set.of(
-            "change-public-keys","get-databasehash","test-associate","get-database-groups"
+            Message.CHANGE_PUBLIC_KEYS.action,Message.GET_DATABASE_HASH.action,Message.TEST_ASSOCIATE.action,Message.GET_DATABASE_GROUPS.action
     );
 
     public Connection() {
@@ -222,8 +247,8 @@ public abstract class Connection implements AutoCloseable {
      */
     private boolean isSignal(JSONObject response) {
         try {
-            return response.has("action") && response.getString("action").equals("database-locked")
-                    || response.has("action") && response.getString("action").equals("database-unlocked");
+            return response.has("action") && response.getString("action").equals(Message.DATABASE_LOCKED.action)
+                    || response.has("action") && response.getString("action").equals(Message.DATABASE_UNLOCKED.action);
         } catch (JSONException je) {
             return false;
         }
@@ -340,7 +365,7 @@ public abstract class Connection implements AutoCloseable {
 
         // Send change-public-keys request
         sendCleartextMessage(jsonTxt(Map.of(
-                "action", "change-public-keys",
+                "action", Message.CHANGE_PUBLIC_KEYS.action,
                 "publicKey", b64encode(keyPair.getPublicKey()),
                 "nonce", b64encode(nonce),
                 "clientID", clientID
@@ -349,7 +374,7 @@ public abstract class Connection implements AutoCloseable {
         var response = new JSONObject();
 
         try {
-            response = executorService.submit(new MessageConsumer("change-public-keys", nonce)).get();
+            response = executorService.submit(new MessageConsumer(Message.CHANGE_PUBLIC_KEYS.action, nonce)).get();
         } catch (InterruptedException | ExecutionException e) {
             LOG.error(e.toString(), e.getCause());
         }
@@ -383,7 +408,7 @@ public abstract class Connection implements AutoCloseable {
 
         // Send associate request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "associate",
+                "action", Message.ASSOCIATE.action,
                 "key", b64encode(keyPair.getPublicKey()),
                 "idKey", b64encode(idKeyPair.getPublicKey())
         ));
@@ -397,7 +422,7 @@ public abstract class Connection implements AutoCloseable {
         Runnable lookupResponse = () -> {
             JSONObject response = null;
             try {
-                response = getEncryptedResponseAndDecrypt("associate", nonce);
+                response = getEncryptedResponseAndDecrypt(Message.ASSOCIATE.action, nonce);
             } catch (KeepassProxyAccessException e) {
                 LOG.error(e.toString(), e.getCause());
             }
@@ -419,8 +444,8 @@ public abstract class Connection implements AutoCloseable {
      */
     public String getDatabasehash() throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request
-        var nonce = sendEncryptedMessage(Map.of("action", "get-databasehash"));
-        var response = getEncryptedResponseAndDecrypt("get-databasehash", nonce);
+        var nonce = sendEncryptedMessage(Map.of("action", Message.GET_DATABASE_HASH.action));
+        var response = getEncryptedResponseAndDecrypt(Message.GET_DATABASE_HASH.action, nonce);
 
         return response.getString("hash");
     }
@@ -437,10 +462,10 @@ public abstract class Connection implements AutoCloseable {
     public String getDatabasehash(boolean triggerUnlock) throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request with triggerUnlock, if needed
         var map = new HashMap<String, Object>(); // Map.of can't be used here, because we need a mutable object
-        map.put("action", "get-databasehash");
+        map.put("action", Message.GET_DATABASE_HASH.action);
         map.put("triggerUnlock", Boolean.toString(triggerUnlock));
         var nonce = sendEncryptedMessage(map);
-        var response = getEncryptedResponseAndDecrypt("get-databasehash", nonce);
+        var response = getEncryptedResponseAndDecrypt(Message.GET_DATABASE_HASH.action, nonce);
 
         return response.getString("hash");
     }
@@ -458,11 +483,11 @@ public abstract class Connection implements AutoCloseable {
     public void testAssociate(String id, String key) throws IOException, KeepassProxyAccessException {
         // Send test-associate request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "test-associate",
+                "action", Message.TEST_ASSOCIATE.action,
                 "id", id,
                 "key", key
         ));
-        getEncryptedResponseAndDecrypt("test-associate", nonce);
+        getEncryptedResponseAndDecrypt(Message.TEST_ASSOCIATE.action, nonce);
 
     }
 
@@ -478,25 +503,17 @@ public abstract class Connection implements AutoCloseable {
      * @throws KeepassProxyAccessException No credentials found for the given URL.
      */
     public JSONObject getLogins(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
-        var array = new JSONArray();
-        // Syntax check for list
-        for (Map<String, String> m : list) {
-            var o = new JSONObject(m);
-            if (!(o.has("id") && o.has("key") && o.length() == 2)) {
-                throw new KeepassProxyAccessException("JSON object key is malformed");
-            }
-            array.put(m);
-        }
+        var jsonArray = checkKeysList(list);
 
         // Send get-logins
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "get-logins",
+                "action", Message.GET_LOGINS.action,
                 "url", ensureNotNull(url),
                 "submitUrl", ensureNotNull(submitUrl),
                 "httpAuth", httpAuth,
-                "keys", array
+                "keys", jsonArray
         ));
-        return getEncryptedResponseAndDecrypt("get-logins", nonce);
+        return getEncryptedResponseAndDecrypt(Message.GET_LOGINS.action, nonce);
 
     }
 
@@ -522,7 +539,7 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject setLogin(String url, String submitUrl, String id, String login, String password, String group, String groupUuid, String uuid) throws IOException, KeepassProxyAccessException {
         // Send set-login
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "set-login",
+                "action", Message.SET_LOGIN.action,
                 "url", ensureNotNull(url),
                 "submitUrl", ensureNotNull(submitUrl),
                 "id", ensureNotNull(id),
@@ -532,7 +549,7 @@ public abstract class Connection implements AutoCloseable {
                 "groupUuid", ensureNotNull(groupUuid),
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt("set-login", nonce);
+        return getEncryptedResponseAndDecrypt(Message.SET_LOGIN.action, nonce);
 
     }
 
@@ -545,8 +562,8 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject getDatabaseGroups() throws IOException, KeepassProxyAccessException {
         // Send get-database-groups
-        var nonce = sendEncryptedMessage(Map.of("action", "get-database-groups"));
-        return getEncryptedResponseAndDecrypt("get-database-groups", nonce);
+        var nonce = sendEncryptedMessage(Map.of("action", Message.GET_DATABASE_GROUPS.action));
+        return getEncryptedResponseAndDecrypt(Message.GET_DATABASE_GROUPS.action, nonce);
 
     }
 
@@ -560,10 +577,10 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject generatePassword() throws IOException, KeepassProxyAccessException {
         // Send generate-password request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "generate-password",
+                "action", Message.GENERATE_PASSWORD.action,
                 "clientID", clientID
         ));
-        return getEncryptedResponseAndDecrypt("generate-password", nonce);
+        return getEncryptedResponseAndDecrypt(Message.GENERATE_PASSWORD.action, nonce);
 
     }
 
@@ -576,8 +593,8 @@ public abstract class Connection implements AutoCloseable {
      */
     public JSONObject lockDatabase() throws IOException, KeepassProxyAccessException {
         // Send lock-database request
-        var nonce = sendEncryptedMessage(Map.of("action", "lock-database"));
-        return getEncryptedResponseAndDecrypt("lock-database", nonce);
+        var nonce = sendEncryptedMessage(Map.of("action", Message.LOCK_DATABASE.action));
+        return getEncryptedResponseAndDecrypt(Message.LOCK_DATABASE.action, nonce);
 
     }
 
@@ -594,10 +611,10 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject createNewGroup(String path) throws IOException, KeepassProxyAccessException {
         // Send create-new-group request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "create-new-group",
+                "action", Message.CREATE_NEW_GROUP.action,
                 "groupName", ensureNotNull(path)
         ));
-        return getEncryptedResponseAndDecrypt("create-new-group", nonce);
+        return getEncryptedResponseAndDecrypt(Message.CREATE_NEW_GROUP.action, nonce);
 
     }
 
@@ -613,10 +630,10 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject getTotp(String uuid) throws IOException, KeepassProxyAccessException {
         // Send get-totp request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "get-totp",
+                "action", Message.GET_TOTP.action,
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt("get-totp", nonce);
+        return getEncryptedResponseAndDecrypt(Message.GET_TOTP.action, nonce);
 
     }
 
@@ -631,10 +648,10 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject deleteEntry(String uuid) throws IOException, KeepassProxyAccessException {
         // Send delete-entry request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "delete-entry",
+                "action", Message.DELETE_ENTRY.action,
                 "uuid", ensureNotNull(uuid)
         ));
-        return getEncryptedResponseAndDecrypt("delete-entry", nonce);
+        return getEncryptedResponseAndDecrypt(Message.DELETE_ENTRY.action, nonce);
     }
 
     /**
@@ -648,32 +665,24 @@ public abstract class Connection implements AutoCloseable {
     public JSONObject requestAutotype(String url) throws IOException, KeepassProxyAccessException {
         // Send request-autotype request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "request-autotype",
+                "action", Message.REQUEST_AUTOTYPE.action,
                 "groupName", ensureNotNull(url)
         ));
-        return getEncryptedResponseAndDecrypt("request-autotype", nonce);
+        return getEncryptedResponseAndDecrypt(Message.REQUEST_AUTOTYPE.action, nonce);
 
     }
 
     public JSONObject passkeysRegister(JSONObject publicKey, String origin, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
-        var array = new JSONArray();
-        // Syntax check for list
-        for (Map<String, String> m : list) {
-            var o = new JSONObject(m);
-            if (!(o.has("id") && o.has("key") && o.length() == 2)) {
-                throw new KeepassProxyAccessException("JSON object key is malformed");
-            }
-            array.put(m);
-        }
+        var jsonArray = checkKeysList(list);
 
         // Send passkeys-register request
         var nonce = sendEncryptedMessage(Map.of(
-                "action", "passkeys-register",
+                "action", Message.PASSKEYS_REGISTER.action,
                 "publicKey", publicKey,
                 "origin", ensureNotNull(origin),
-                "keys", array
+                "keys", jsonArray
         ));
-        return getEncryptedResponseAndDecrypt("passkeys-register", nonce);
+        return getEncryptedResponseAndDecrypt(Message.PASSKEYS_REGISTER.action, nonce);
 
     }
 
@@ -741,6 +750,25 @@ public abstract class Connection implements AutoCloseable {
 
     private String ensureNotNull(String param) {
         return null == param ? "" : param;
+    }
+
+    /**
+     * Syntax check for keys array.
+     *
+     * @param list A list of pairs of associateID and IDKeyPublicKey stored on association.
+     * @return Transformed list as a JSONArray.
+     * @throws KeepassProxyAccessException The JSON object key pair is malformed.
+     */
+    private JSONArray checkKeysList(List<Map<String, String>> list) throws KeepassProxyAccessException {
+        var array = new JSONArray();
+        for (Map<String, String> m : list) {
+            var o = new JSONObject(m);
+            if (!(o.has("id") && o.has("key") && o.length() == 2)) {
+                throw new KeepassProxyAccessException("JSON object key pair is malformed");
+            }
+            array.put(m);
+        }
+        return array;
     }
 
     // Getters and Setters
