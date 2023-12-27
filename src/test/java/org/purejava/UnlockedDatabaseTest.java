@@ -51,9 +51,10 @@ public class UnlockedDatabaseTest {
         assertTrue(kpa.requestAutotype("https://github.com"));
         LOG.info("Please allow to delete entry");
         assertTrue(kpa.deleteEntry("2aafee1a89fd435c8bad7df12bbaaa3e"));
+        LOG.info("Please register the offered Passkey");
         String publicKey = "{\"attestation\":\"direct\",\"authenticatorSelection\":{\"requireResidentKey\":true,\"residentKey\":\"required\",\"userVerification\":\"preferred\"},\"challenge\":\"AICQS3rj6P-dIDb5if3OCte-Y7CEs_BEnpTgoasQRXg\",\"excludeCredentials\":[],\"extensions\":{\"credProps\":true},\"pubKeyCredParams\":[{\"alg\":-7,\"type\":\"public-key\"},{\"alg\":-257,\"type\":\"public-key\"}],\"rp\":{\"id\":\"passkey.org\",\"name\":\"Yubico Demo\"},\"timeout\":90000,\"user\":{\"displayName\":\"purejava\",\"id\":\"DEMO__9fX19ERU1P\",\"name\":\"purejava\"}}";
         JSONObject p = new JSONObject(publicKey);
-        LOG.info(kpa.passkeysRegister(p, "https://passkey.org", l));
+        assertTrue(kpa.passkeysRegister(p, "https://passkey.org", l).getJSONObject("response").getString("clientDataJSON").equals("eyJjaGFsbGVuZ2UiOiJBSUNRUzNyajZQLWRJRGI1aWYzT0N0ZS1ZN0NFc19CRW5wVGdvYXNRUlhnIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvcmlnaW4iOiJodHRwczovL3Bhc3NrZXkub3JnIiwidHlwZSI6IndlYmF1dGhuLmNyZWF0ZSJ9"));
         LOG.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
         assertTrue(kpa.shutdown());

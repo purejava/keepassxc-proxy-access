@@ -424,7 +424,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
-    public String passkeysRegister(JSONObject publicKey, String origin, List<Map<String, String>> list) {
+    public JSONObject passkeysRegister(JSONObject publicKey, String origin, List<Map<String, String>> list) {
         try {
             var response = connection.passkeysRegister(publicKey, origin, list);
             if (response.has("response") && response.has("success") && response.getString("success").equals("true")) {
@@ -433,15 +433,15 @@ public class KeepassProxyAccess implements PropertyChangeListener {
                     throw new KeepassProxyAccessException("ErrorCode: " + errorCode);
 
                 } catch (JSONException e) {
-                    return response.getString("response"); // PublicKeyCredential
+                    return response.getJSONObject("response"); // PublicKeyCredential
                 }
             } else {
-                return "";
+                return new JSONObject();
             }
         } catch (IOException | KeepassProxyAccessException e) {
             LOG.info(e.toString(), e.getCause());
         }
-        return "";
+        return new JSONObject();
     }
 
     /**
