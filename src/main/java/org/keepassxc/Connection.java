@@ -709,6 +709,44 @@ public abstract class Connection implements AutoCloseable {
     }
 
     /**
+     * Request passkeys-get from the KeePassXC database (KeePassXC 2.8.0 and newer).
+     * @param publicKey An object containing all required information for the public key.
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API">Web Authentication API</a> for publicKey contents.
+     * @param origin    The origin the request originates from in the form {@code https://...}
+     * @param list      A list of pairs of associateID and IDKeyPublicKey stored on association.
+     * @return An object that contains the result of the operation. In case authenticating with the Passkey was successful, the response
+     *         looks like: <pre>{@code "response": {
+     *         "authenticatorAttachment": "platform",
+     *         "id": "tX6nBMj5Ksxg6QnTL1ilSwipm_up7rIiYsIQmYTKIAg",
+     *         "response": {
+     *             "authenticatorData": "5Yaf4EYzO6ALp_K7s-p-BQLPSCYVYcKLZptoXwxqQzsFAAAAAA",
+     *             "clientDataJSON": "eyJj...",
+     *             "signature": "MEYC...",
+     *             "userHandle": "DEMO__9fX19ERU1P"
+     *         },
+     *         "type": "public-key"
+     * }}</pre>
+     * In case the authentication failed, the response looks like: <pre>{@code "response": {
+     *         "errorCode": 15
+     * }}</pre>
+     * @throws IOException                 The passkeys-get request failed due to technical reasons.
+     * @throws KeepassProxyAccessException The request could not be processed.
+     */
+    public JSONObject passkeysGet(JSONObject publicKey, String origin, List<Map<String, String>> list) throws IOException, KeepassProxyAccessException {
+        var jsonArray = checkKeysList(list);
+
+        // Send passkeys-get request
+        var nonce = sendEncryptedMessage(Map.of(
+                "action", Message.PASSKEYS_GET.action,
+                "publicKey", publicKey,
+                "origin", ensureNotNull(origin),
+                "keys", jsonArray
+        ));
+        return getEncryptedResponseAndDecrypt(Message.PASSKEYS_GET.action, nonce);
+
+    }
+
+    /**
      * Get a String representation of the JSON object.
      *
      * @param keysValues The keys/values defining the JSON object.

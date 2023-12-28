@@ -465,6 +465,48 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
+     * Request passkeys-get from the KeePassXC database (KeePassXC 2.8.0 and newer).
+     * @param publicKey An object containing all required information for the public key.
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API">Web Authentication API</a> for publicKey contents.
+     * @param origin    The origin the request originates from in the form {@code https://...}
+     * @param list      A list of pairs of associateID and IDKeyPublicKey stored on association.
+     * @return An object that contains the result of the operation. In case authenticating with the Passkey was successful, the response
+     *         looks like: <pre>{@code "response": {
+     *         "authenticatorAttachment": "platform",
+     *         "id": "tX6nBMj5Ksxg6QnTL1ilSwipm_up7rIiYsIQmYTKIAg",
+     *         "response": {
+     *             "authenticatorData": "5Yaf4EYzO6ALp_K7s-p-BQLPSCYVYcKLZptoXwxqQzsFAAAAAA",
+     *             "clientDataJSON": "eyJj...",
+     *             "signature": "MEYC...",
+     *             "userHandle": "DEMO__9fX19ERU1P"
+     *         },
+     *         "type": "public-key"
+     * }}</pre>
+     * In case the authentication failed, the response looks like: <pre>{@code "response": {
+     *         "errorCode": 15
+     * }}</pre>
+     */
+    public JSONObject passkeysGet(JSONObject publicKey, String origin, List<Map<String, String>> list) {
+        try {
+            var response = connection.passkeysGet(publicKey, origin, list);
+            if (response.has("response") && response.has("success") && response.getString("success").equals("true")) {
+                try {
+                    var errorCode = response.getJSONObject("response").getInt("errorCode");
+                    throw new KeepassProxyAccessException("ErrorCode: " + errorCode);
+
+                } catch (JSONException e) {
+                    return response.getJSONObject("response"); // PublicKeyCredential
+                }
+            } else {
+                return new JSONObject();
+            }
+        } catch (IOException | KeepassProxyAccessException e) {
+            LOG.info(e.toString(), e.getCause());
+        }
+        return new JSONObject();
+    }
+
+    /**
      * Extract the groupUuid for the newly created group.
      * Note: in case a group with the following path was created: level1/level2, only level2 gets returned as name.
      *
