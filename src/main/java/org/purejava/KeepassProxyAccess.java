@@ -426,8 +426,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     /**
      * Request passkeys-register from the KeePassXC database (KeePassXC 2.8.0 and newer).
-     * @param publicKey An object containing all required information for the public key.
-     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API">Web Authentication API</a> for publicKey contents.
+     * @param publicKey An object containing public key-based credential.
+     * @see <a href="https://www.w3.org/TR/webauthn-3/">Web Authentication: An API for accessing Public Key Credentials</a>.
      * @param origin    The origin the request originates from in the form {@code https://...}
      * @param list      A list of pairs of associateID and IDKeyPublicKey stored on association.
      * @return An object that contains the result of the operation. In case the Passkey could be registered, the response
@@ -466,8 +466,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     /**
      * Request passkeys-get from the KeePassXC database (KeePassXC 2.8.0 and newer).
-     * @param publicKey An object containing all required information for the public key.
-     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API">Web Authentication API</a> for publicKey contents.
+     * @param publicKey An object containing public key-based credential.
+     * @see <a href="https://www.w3.org/TR/webauthn-3/">Web Authentication: An API for accessing Public Key Credentials</a>.
      * @param origin    The origin the request originates from in the form {@code https://...}
      * @param list      A list of pairs of associateID and IDKeyPublicKey stored on association.
      * @return An object that contains the result of the operation. In case authenticating with the Passkey was successful, the response
