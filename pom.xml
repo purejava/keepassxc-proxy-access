@@ -46,7 +46,7 @@
         <json.version>20231013</json.version>
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <junit.version>5.10.1</junit.version>
-        <slf4j.version>2.0.10</slf4j.version>
+        <slf4j.version>2.0.11</slf4j.version>
     </properties>
 
     <dependencies>
