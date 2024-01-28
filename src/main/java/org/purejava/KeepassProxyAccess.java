@@ -57,7 +57,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         connection.addPropertyChangeListener(this);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                connection.removePropertyChangeListener(this);
+            connection.removePropertyChangeListener(this);
             try {
                 shutdown();
             } catch (Exception e) {
@@ -71,9 +71,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     /**
      * Loads the {@link org.purejava.Credentials Credentials} from disc, if available, to setup this library
      * so that it can be used to send requests to and receive requests from a KeePassXC database.
-     * @see org.purejava.Credentials
      *
      * @return An Optional of the Credentials read from disc in case they are available, an empty Optional otherwise.
+     * @see org.purejava.Credentials
      */
     private Optional<Credentials> loadCredentials() {
         try (var fileIs = new FileInputStream(fileLocation);
@@ -90,9 +90,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     /**
      * Saves {@link org.purejava.Credentials Credentials} in a delayed background thread to disc, as this is a time consuming
      * operation that might fail.
-     * @see org.purejava.Credentials
      *
      * @param credentials An Optional of the Credentials to be saved.
+     * @see org.purejava.Credentials
      */
     private void scheduleSave(Optional<Credentials> credentials) {
         if (credentials.isEmpty()) {
@@ -109,9 +109,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     /**
      * Saves {@link org.purejava.Credentials Credentials} to disc.
-     * @see org.purejava.Credentials
      *
      * @param credentials An Optional of the Credentials to be saved.
+     * @see org.purejava.Credentials
      */
     private void saveCredentials(Optional<Credentials> credentials) {
         LOG.debug("Attempting to save credentials");
@@ -145,11 +145,11 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     /**
      * Establish a connection to the KeePassXC proxy. This is required for every session.
      * The closing of the connection is handled automatically.
-     * @see org.keepassxc.LinuxMacConnection
-     * @see org.keepassxc.WindowsConnection
      *
      * @return True, if connecting to the proxy was successful, false, if connecting failed due to technical reasons
      * or the proxy wasn't started.
+     * @see org.keepassxc.LinuxMacConnection
+     * @see org.keepassxc.WindowsConnection
      */
     public boolean connect() {
         try {
@@ -184,13 +184,13 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * a connection to KeePassXC, the public idKey and the public associateId are required. With these parameters,
      * {@link org.purejava.KeepassProxyAccess#testAssociate(String, String) testAssociate} is called to verify the
      * association. A valid association enables the client to send requests to and receive requests from KeePassXC.
-     * @see org.purejava.KeepassProxyAccess#testAssociate(String, String)
      *
      * @return True, if a valid association with KeePassXC exists, false otherwise.
+     * @see org.purejava.KeepassProxyAccess#testAssociate(String, String)
      */
     public boolean connectionAvailable() {
         return getIdKeyPairPublicKey() != null &&
-               !getIdKeyPairPublicKey().isEmpty() &&
+                !getIdKeyPairPublicKey().isEmpty() &&
                 getAssociateId() != null &&
                 !getAssociateId().isEmpty() &&
                 testAssociate(getAssociateId(), getIdKeyPairPublicKey());
@@ -261,7 +261,6 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * Checks, whether a login exists and a given password is stored in the KeePassXC databases. This method calls
      * {@link org.purejava.KeepassProxyAccess#getLogins(String, String, boolean, List) getLogins} to search
      * the KeePassXC databases.
-     * @see org.purejava.KeepassProxyAccess#getLogins(String, String, boolean, List)
      *
      * @param url       The URL credentials are looked up for.
      * @param submitUrl URL that can be passed along amd gets added to entry properties.
@@ -269,6 +268,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @param list      Id / key combinations identifying and granting access to KeePassXC databases.
      * @param password  Password to check.
      * @return ValidLogin The object describes whether a valid login exists for the given URL and whether the given password matches too.
+     * @see org.purejava.KeepassProxyAccess#getLogins(String, String, boolean, List)
      */
     public ValidLogin loginExists(String url, String submitUrl, boolean httpAuth, List<Map<String, String>> list, String password) {
         var response = getLogins(url, submitUrl, httpAuth, list);
