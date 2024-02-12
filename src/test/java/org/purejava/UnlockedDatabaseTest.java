@@ -52,13 +52,13 @@ public class UnlockedDatabaseTest {
         LOG.info("Please allow to delete entry");
         assertTrue(kpa.deleteEntry("2aafee1a89fd435c8bad7df12bbaaa3e"));
         LOG.info("Please register the offered Passkey");
-        String publicKey = "{\"attestation\":\"direct\",\"authenticatorSelection\":{\"requireResidentKey\":true,\"residentKey\":\"required\",\"userVerification\":\"preferred\"},\"challenge\":\"AICQS3rj6P-dIDb5if3OCte-Y7CEs_BEnpTgoasQRXg\",\"excludeCredentials\":[],\"extensions\":{\"credProps\":true},\"pubKeyCredParams\":[{\"alg\":-7,\"type\":\"public-key\"},{\"alg\":-257,\"type\":\"public-key\"}],\"rp\":{\"id\":\"passkey.org\",\"name\":\"Yubico Demo\"},\"timeout\":90000,\"user\":{\"displayName\":\"purejava\",\"id\":\"DEMO__9fX19ERU1P\",\"name\":\"purejava\"}}";
+        String publicKey = "{\"attestation\":\"none\",\"authenticatorSelection\":{\"requireResidentKey\":false,\"residentKey\":\"preferred\",\"userVerification\":\"preferred\"},\"challenge\":\"hJy53kwPc3OdqbkjXQ268VAiHGW-s0qH_MWYYIm_jfmCcK7jBuV1jTZ7mdChX-9uy0dBR3N9Ql7QpLqYr_0lNg\",\"excludeCredentials\":[],\"extensions\":{\"credProps\":true},\"pubKeyCredParams\":[{\"alg\":-7,\"type\":\"public-key\"},{\"alg\":-257,\"type\":\"public-key\"}],\"rp\":{\"id\":\"webauthn.io\",\"name\":\"webauthn.io\"},\"timeout\":60000,\"user\":{\"displayName\":\"ralph@purejava.org\",\"id\":\"Y21Gc2NHaEFjSFZ5WldwaGRtRXViM0pu\",\"name\":\"ralph@purejava.org\"}}";
         JSONObject p = new JSONObject(publicKey);
-        assertEquals("eyJjaGFsbGVuZ2UiOiJBSUNRUzNyajZQLWRJRGI1aWYzT0N0ZS1ZN0NFc19CRW5wVGdvYXNRUlhnIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvcmlnaW4iOiJodHRwczovL3Bhc3NrZXkub3JnIiwidHlwZSI6IndlYmF1dGhuLmNyZWF0ZSJ9", kpa.passkeysRegister(p, "https://passkey.org", l).getJSONObject("response").getString("clientDataJSON"));
+        assertEquals("eyJjaGFsbGVuZ2UiOiJoSnk1M2t3UGMzT2RxYmtqWFEyNjhWQWlIR1ctczBxSF9NV1lZSW1famZtQ2NLN2pCdVYxalRaN21kQ2hYLTl1eTBkQlIzTjlRbDdRcExxWXJfMGxOZyIsImNyb3NzT3JpZ2luIjpmYWxzZSwib3JpZ2luIjoiaHR0cHM6Ly93ZWJhdXRobi5pbyIsInR5cGUiOiJ3ZWJhdXRobi5jcmVhdGUifQ", kpa.passkeysRegister(p, "https://webauthn.io", l).getJSONObject("response").getString("clientDataJSON"));
         LOG.info("Please allow authenticate with the stored Passkey");
-        publicKey = "{\"allowCredentials\":[],\"challenge\":\"8rRycwlx8ZOczHfALOJR-ef9RmYBmNt7HQABHxpcSvM\",\"rpId\":\"passkey.org\",\"timeout\":90000,\"userVerification\":\"preferred\"}";
+        publicKey = "{\"allowCredentials\":[],\"challenge\":\"8rRycwlx8ZOczHfALOJR-ef9RmYBmNt7HQABHxpcSvM\",\"rpId\":\"webauthn.io\",\"timeout\":90000,\"userVerification\":\"preferred\"}";
         p = new JSONObject(publicKey);
-        assertEquals("5Yaf4EYzO6ALp_K7s-p-BQLPSCYVYcKLZptoXwxqQzsFAAAAAA", kpa.passkeysGet(p, "https://passkey.org", l).getJSONObject("response").getString("authenticatorData"));
+        assertEquals("dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvAFAAAAAA", kpa.passkeysGet(p, "https://webauthn.io", l).getJSONObject("response").getString("authenticatorData"));
         LOG.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
         assertTrue(kpa.shutdown());
