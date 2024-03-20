@@ -22,3 +22,5 @@ pom.xml.versionsBackup
 .idea/**/libraries/
 *.iml
 
+/.idea/copilot/
+/.idea/inspectionProfiles/

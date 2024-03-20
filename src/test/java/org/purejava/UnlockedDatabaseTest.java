@@ -25,23 +25,40 @@ public class UnlockedDatabaseTest {
     @Order(3)
     @DisplayName("Testing KeePassXC proxy functionality")
     public void shouldHaveNoErrors() throws InterruptedException {
-        LOG.info("Please enter a name for the connection in the pop-up within 10 seconds");
+        LOG.info("Please enter a name for the connection in the pop-up within 60 seconds");
         assertTrue(kpa.connect());
         // TODO:
         //  Revert after Qt bug is fixed
         //  This is false due to the workaround, although association succeeds
-        assertFalse(kpa.associate());
+        assertTrue(kpa.associateAndWait());
         // TODO:
         //  Revert after Qt bug is fixed
         //  This compensates throwing a KeepassProxyAccessException in Connection#associate()
-        Thread.sleep(10000L); // give me 10 seconds to enter a associate id
-        assertTrue(null != kpa.getDatabasehash() && !kpa.getDatabasehash().isEmpty());
-        assertTrue(kpa.testAssociate(kpa.getAssociateId(), kpa.getIdKeyPairPublicKey()));
+        assertTrue(kpa.databaseIsUnlocked());
+        assertTrue(kpa.getDatabasehash().isPresent() && !kpa.getDatabasehash().get().isEmpty());
+        assertTrue(kpa.testAssociate(kpa.getAssociateId().get(), kpa.getIdKeyPairPublicKey().get()));
         LOG.info("Please allow access to credentials");
         List<Map<String, String>> l = new ArrayList<>();
         l.add(kpa.exportConnection());
-        assertTrue(kpa.getLogins("https://github.com", null, false, l).toString().contains("uuid=2aafee1a89fd435c8bad7df12bbaaa3e"));
-        assertTrue(kpa.setLogin("https://github.com", "https://github.com", null, "User", "Passsword", "Group", null, null));
+
+        assertTrue(
+            kpa.getLogins("https://github.com", null, false, l)
+                .toString().contains("uuid=2aafee1a89fd435c8bad7df12bbaaa3e")
+        );
+
+        assertTrue(
+            kpa.setLogin(
+                "https://github.com",
+                "https://github.com",
+                null,
+                "User",
+                "Passsword",
+                "Group",
+                null,
+                null
+            )
+        );
+
         assertTrue(kpa.databaseGroupsToMap(kpa.getDatabaseGroups()).toString().contains("KeePassXC-Browser Passwords"));
         assertFalse(kpa.generatePassword().isEmpty());
         LOG.info("Please allow to create new group");
@@ -58,7 +75,12 @@ public class UnlockedDatabaseTest {
         LOG.info("Please allow authenticate with the stored Passkey");
         publicKey = "{\"allowCredentials\":[],\"challenge\":\"8rRycwlx8ZOczHfALOJR-ef9RmYBmNt7HQABHxpcSvM\",\"rpId\":\"webauthn.io\",\"timeout\":90000,\"userVerification\":\"preferred\"}";
         p = new JSONObject(publicKey);
-        assertEquals("dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvAFAAAAAA", kpa.passkeysGet(p, "https://webauthn.io", l).getJSONObject("response").getString("authenticatorData"));
+
+        assertEquals(
+            "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvAFAAAAAA",
+            kpa.passkeysGet(p, "https://webauthn.io", l).getJSONObject("response").getString("authenticatorData")
+        );
+
         LOG.info("Please deny to save changes");
         assertTrue(kpa.lockDatabase());
         assertTrue(kpa.shutdown());
