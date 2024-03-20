@@ -285,6 +285,12 @@ public class KeepassProxyAccess implements PropertyChangeListener {
         }
     }
 
+    /**
+     * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
+     * @return The database hash of the current active KeePassXC database in case the hash could be retrieved,
+     *         an empty String otherwise.
+     * @see #getDatabasehash(boolean)
+     */
     public Optional<String> getDatabasehash() {
         try {
             return connection.getDatabasehash();
