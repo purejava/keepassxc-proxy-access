@@ -391,7 +391,7 @@ public abstract class Connection implements AutoCloseable {
         box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
 
         if (Optional.ofNullable(credentials).isEmpty()) {
-            setCredentials(null);
+            setCredentials(new Credentials());
         }
         Optional.ofNullable(credentials).orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setOwnKeypair(keyPair);
         Optional.ofNullable(credentials).orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setServerPublicKey(publicKey);
