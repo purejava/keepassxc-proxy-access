@@ -21,6 +21,3 @@ pom.xml.versionsBackup
 .idea/dictionaries
 .idea/**/libraries/
 *.iml
-
-/.idea/copilot/
-/.idea/inspectionProfiles/
