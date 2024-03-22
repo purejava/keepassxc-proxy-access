@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/github/license/purejava/keepassxc-proxy-access.svg)](https://github.com/purejava/keepassxc-proxy-access/blob/master/LICENSE)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=XVX9ZM7WE4ANL)
 
-A Java library to access KeePassXC via its built-in proxy. Requires KeePassXC 2.6.0 or newer.
+A Java library to access KeePassXC via its build-in proxy. Requires KeePassXC 2.6.0 or newer.
 
 # Dependency
 Add `keepassxc-proxy-access` as a dependency to your project.

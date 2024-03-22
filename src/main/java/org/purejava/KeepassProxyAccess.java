@@ -20,9 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.temporal.TemporalAmount;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,13 +39,6 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     private final String V2_7_0 = "2.7.0";
 
-    /**
-     * Constructs a new KeepassProxyAccess object and tries to load existing {@link Credentials} from disc.
-     * <p>
-     * In the case of Linux and Mac OS X, the credentials file is assumed to be located in the user's home directory
-     * under {@code ~/.config/keepass-proxy-access/keepass-proxy-access.dat}. For Windows, the file is assumed to be
-     * located in the user's AppData directory under {@code %AppData%/keepass-proxy-access/keepass-proxy-access.dat}.
-     */
     public KeepassProxyAccess() {
         if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX) {
             connection = new LinuxMacConnection();
@@ -75,7 +65,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             }
         }
         ));
-        connection.setCredentials(loadCredentials().orElse(null));
+        connection.setCredentials(loadCredentials());
     }
 
     /**
@@ -104,8 +94,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @param credentials An Optional of the Credentials to be saved.
      * @see org.purejava.Credentials
      */
-    private void scheduleSave(Credentials credentials) {
-        if (credentials == null) {
+    private void scheduleSave(Optional<Credentials> credentials) {
+        if (credentials.isEmpty()) {
             LOG.debug("Credentials are not present and won't be saved");
             return;
         }
@@ -118,12 +108,12 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
-     * Saves {@link org.purejava.Credentials Credentials} to disc as specified in {@link #fileLocation}.
+     * Saves {@link org.purejava.Credentials Credentials} to disc.
      *
      * @param credentials An Optional of the Credentials to be saved.
      * @see org.purejava.Credentials
      */
-    private void saveCredentials(Credentials credentials) {
+    private void saveCredentials(Optional<Credentials> credentials) {
         LOG.debug("Attempting to save credentials");
         try {
             var path = Path.of(fileLocation);
@@ -131,7 +121,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
             var tmpPath = path.resolveSibling(path.getFileName().toString() + ".tmp");
             try (var ops = Files.newOutputStream(tmpPath, StandardOpenOption.CREATE_NEW);
                  var objOps = new ObjectOutputStream(ops)) {
-                objOps.writeObject(credentials);
+                objOps.writeObject(credentials.get());
                 objOps.flush();
             }
             Files.move(tmpPath, path, StandardCopyOption.REPLACE_EXISTING);
@@ -148,8 +138,8 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @return The entered associateID and returned IDKeyPublicKey stored on association.
      */
     public Map<String, String> exportConnection() {
-        return Map.of("id", connection.getAssociateId().orElse(""),
-                "key", connection.getIdKeyPairPublicKey().orElse(""));
+        return Map.of("id", connection.getAssociateId(),
+                "key", connection.getIdKeyPairPublicKey());
     }
 
     /**
@@ -175,8 +165,6 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * creates the public idKey and the public associateId.
      *
      * @return True, if it was possible to associate KeePassXC with a new client, false otherwise.
-     * @see #associateAndWait()
-     * @see #associateAndWait(TemporalAmount)
      */
     public boolean associate() {
         try {
@@ -192,65 +180,6 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
-     * Connects KeePassXC with a new client and waits 60 seconds for the user to allow the association in KeePassXC and
-     * to enter an associate ID. This is required once, on connecting a new client to KeePassXC and creates the public
-     * idKey and the public associateId.
-     * @return {@code true} if the association was successful, {@code false} otherwise.
-     * @see #associateAndWait(TemporalAmount)
-     * @see #associate()
-     */
-    public boolean associateAndWait() {
-        return associateAndWait(Duration.ofSeconds(60));
-    }
-
-    /**
-     * Connects KeePassXC with a new client and waits for the user to allow the association in KeePassXC and to enter an
-     * associate ID. This is required once, on connecting a new client to KeePassXC and creates the public idKey and the
-     * public associateId.
-     * @param timeout The maximum time to wait for the user to enter the associate ID. If the user has not entered the
-     *                associate ID within the given time, the method returns {@code false}.
-     * @return {@code true} if the association was successful, {@code false} otherwise.
-     * @see #associateAndWait()
-     * @see #associate()
-     */
-    public boolean associateAndWait(TemporalAmount timeout) {
-        this.associate();
-		LocalDateTime start = LocalDateTime.now();
-		try { Thread.sleep(100); } catch(InterruptedException e) { return false; }
-
-		int counter = 0;
-
-		while(LocalDateTime.now().isBefore(start.plus(timeout))) {
-			if (
-				this.getAssociateId().isEmpty() ||
-				this.getAssociateId().get().isEmpty() || // Whitespace-only strings may be valid.
-				this.getIdKeyPairPublicKey().isEmpty() ||
-				this.getIdKeyPairPublicKey().get().isBlank() || // The public key must not be whitespace-only.
-				!this.testAssociate(this.getAssociateId().orElse(""), this.getIdKeyPairPublicKey().orElse(""))
-			) {
-				LOG.warn(
-					"KeePassXC has not yet provided an associate ID or public key at attempt %d.".formatted(counter)
-				);
-
-				counter++;
-				if (Thread.currentThread().isInterrupted()) return false; // Stop if the thread was asked to stop.
-				try { Thread.sleep(100); } catch(InterruptedException e) { return false; }
-				continue;
-			}
-
-			LOG.trace(
-				"Associated with KeePassXC after %d attempts. Associate ID: %s, Public Key: %s"
-					.formatted(counter, this.getAssociateId(), this.getIdKeyPairPublicKey())
-			);
-
-			return true;
-		}
-
-		LOG.error("Could not associate with KeePassXC after %s attempts.".formatted(counter));
-		return false;
-    }
-
-    /**
      * Checks, if this client has been associated with KeePassXC and if the association is still valid. To establish
      * a connection to KeePassXC, the public idKey and the public associateId are required. With these parameters,
      * {@link org.purejava.KeepassProxyAccess#testAssociate(String, String) testAssociate} is called to verify the
@@ -260,11 +189,11 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * @see org.purejava.KeepassProxyAccess#testAssociate(String, String)
      */
     public boolean connectionAvailable() {
-        return getIdKeyPairPublicKey().isPresent() &&
-              !getIdKeyPairPublicKey().get().isBlank() &&
-	           getAssociateId().isPresent() &&
-              !getAssociateId().get().isBlank() &&
-               testAssociate(getAssociateId().orElse(""), getIdKeyPairPublicKey().orElse(""));
+        return getIdKeyPairPublicKey() != null &&
+                !getIdKeyPairPublicKey().isEmpty() &&
+                getAssociateId() != null &&
+                !getAssociateId().isEmpty() &&
+                testAssociate(getAssociateId(), getIdKeyPairPublicKey());
     }
 
     /**
@@ -287,30 +216,22 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     /**
      * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
-     * @return The database hash of the current active KeePassXC database in case the hash could be retrieved,
-     *         an empty String otherwise.
-     * @see #getDatabasehash(boolean)
-     */
-    public Optional<String> getDatabasehash() {
-        try {
-            return connection.getDatabasehash();
-        } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
-            LOG.info(e.toString(), e.getCause());
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Request for receiving the database hash (SHA256) of the current active KeePassXC database.
-     * The request can be sent in conjunction with an optional request to unlock the KeePassXC database.
+     * The request can be send in conjunction with an optional request to unlock the KeePassXC database.
      *
      * @param unlock When true, the KeePassXC application is brought to the front and unlock is requested from the user.
-     * @return The database hash of the current active KeePassXC database in case the hash could be retrieved,
-     * an empty String otherwise.
+     * @return An Optional containing the database hash of the current active KeePassXC database in case the hash could be retrieved,
+     * an empty Optional otherwise.
      */
-    public Optional<String> getDatabasehash(boolean unlock) {
+    public Optional<String> getDatabasehash(boolean... unlock) {
         try {
-            return connection.getDatabasehash(unlock);
+            if (unlock.length > 1) {
+                throw new IllegalStateException("Invalid number of parameters for getDatabasehash(boolean... unlock)");
+            }
+            return switch (unlock.length) {
+                case 0 -> Optional.of(connection.getDatabasehash());
+                case 1 -> Optional.of(connection.getDatabasehash(unlock[0]));
+                default -> Optional.empty();
+            };
         } catch (IOException | IllegalStateException | KeepassProxyAccessException e) {
             LOG.info(e.toString(), e.getCause());
             return Optional.empty();
@@ -318,25 +239,22 @@ public class KeepassProxyAccess implements PropertyChangeListener {
     }
 
     /**
+     * Check, whether the connected KeePassXC database is unlocked.
+     *
      * @return {@code true} if the connected KeePassXC database is unlocked (i.e. logins can be fetched), {@code false}
      *         otherwise.
      */
-    public boolean databaseIsUnlocked() {
-        try {
-            return !getDatabasehash().orElse("").isEmpty();
-        } catch (Exception e) {
-            LOG.error(e.toString(), e.getCause());
-            return false;
-        }
+    public boolean isDatabaseLocked() {
+        return getDatabasehash().isEmpty();
     }
 
     /**
      * Request credentials from KeePassXC databases for a given URL.
      *
      * @param url       The URL credentials are looked up for.
-     * @param submitUrl URL that can be passed along and gets added to entry properties.
+     * @param submitUrl URL that can be passed along amd gets added to entry properties.
      * @param httpAuth  Include database entries into search that are restricted to HTTP Basic Auth.
-     * @param list      ID / key combinations identifying and granting access to KeePassXC databases.
+     * @param list      Id / key combinations identifying and granting access to KeePassXC databases.
      * @return A Map that contains all found credentials together with additional information, in case credentials
      * were found, an empty Map otherwise.
      */
@@ -355,9 +273,9 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * the KeePassXC databases.
      *
      * @param url       The URL credentials are looked up for.
-     * @param submitUrl URL that can be passed along and gets added to entry properties.
+     * @param submitUrl URL that can be passed along amd gets added to entry properties.
      * @param httpAuth  Include database entries into search that are restricted to HTTP Basic Auth.
-     * @param list      ID / key combinations identifying and granting access to KeePassXC databases.
+     * @param list      Id / key combinations identifying and granting access to KeePassXC databases.
      * @param password  Password to check.
      * @return ValidLogin The object describes whether a valid login exists for the given URL and whether the given password matches too.
      * @see org.purejava.KeepassProxyAccess#getLogins(String, String, boolean, List)
@@ -379,7 +297,7 @@ public class KeepassProxyAccess implements PropertyChangeListener {
      * Request to store a new entry or update an existing entry in the current KeePassXC database.
      *
      * @param url       The URL to be saved. The title of the new entry is the hostname of the URL.
-     * @param submitUrl URL that can be passed along and gets added to entry properties.
+     * @param submitUrl URL that can be passed along amd gets added to entry properties.
      * @param id        An identifier for the KeePassXC database connection - ignored at the moment.
      * @param login     The username to be saved.
      * @param password  The password to be saved.
@@ -580,26 +498,23 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     /**
      * Parses a response from the KeePassXC database for passkeys-register and passkeys-get requests.
+     *
      * @param response The response from the KeePassXC database to be parsed.
      * @return The response from the KeePassXC database. Empty if the key {@code response} is not present or the key
      *         {@code success} is not present or {@code success} is not {@code true}.
-     * @throws KeepassProxyAccessException If the response contains an error code or if the response is not a JSONObject.
+     * @throws KeepassProxyAccessException If the response contains an error code.
      */
     private JSONObject parsePasskeysResponse(JSONObject response) throws KeepassProxyAccessException {
-        if (!response.has("response") || !response.has("success") || !response.getString("success").equals("true")) {
-            return new JSONObject();
-        }
+        if (response.has("response") && response.has("success") && response.getString("success").equals("true")) {
+            try {
+                var errorCode = response.getJSONObject("response").getInt("errorCode");
+                throw new KeepassProxyAccessException("ErrorCode: " + errorCode);
 
-        try {
-            if (response.getJSONObject("response").has("errorCode")) {
-                throw new KeepassProxyAccessException("ErrorCode: " + response.getJSONObject("response").getInt("errorCode"));
+            } catch (JSONException e) {
+                return response.getJSONObject("response");
             }
-        } catch(Exception ignored) {} // will be thrown if there is no error code, i.e. if the response was successful
-
-        try {
-            return response.getJSONObject("response"); // PublicKeyCredential
-        } catch (JSONException e) {
-            throw new KeepassProxyAccessException("Response is not a JSONObject"); // should never happen
+        } else {
+            return new JSONObject();
         }
     }
 
@@ -663,14 +578,14 @@ public class KeepassProxyAccess implements PropertyChangeListener {
 
     @Override
     public void propertyChange(PropertyChangeEvent event) {
-        scheduleSave((Credentials) event.getNewValue());
+        scheduleSave((Optional<Credentials>) event.getNewValue());
     }
 
-    public Optional<String> getIdKeyPairPublicKey() {
+    public String getIdKeyPairPublicKey() {
         return connection.getIdKeyPairPublicKey();
     }
 
-    public Optional<String> getAssociateId() {
+    public String getAssociateId() {
         return connection.getAssociateId();
     }
 

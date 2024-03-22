@@ -15,11 +15,16 @@ public class Credentials implements Serializable {
 
     private byte[] serverPublicKey;
 
-    private transient String associateId;
+    private transient Optional<String> associateId;
     private String aID;
 
-    private transient byte[] idKeyPublicKey;
+    private transient Optional<byte[]> idKeyPublicKey;
     private byte[] idKeyPub;
+
+    public Credentials() {
+        this.associateId = Optional.empty();
+        this.idKeyPublicKey = Optional.empty();
+    }
 
     @Serial
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
@@ -33,7 +38,7 @@ public class Credentials implements Serializable {
     @Serial
     private void writeObject(ObjectOutputStream oos) throws IOException {
         secretKey = ownKeypair.getSecretKey();
-        aID = getAssociateId().orElse(null);
+        aID = getAssociateId();
         idKeyPub = getIdKeyPublicKey();
         oos.defaultWriteObject();
     }
@@ -55,32 +60,27 @@ public class Credentials implements Serializable {
         this.serverPublicKey = serverPublicKey;
     }
 
-    public Optional<String> getAssociateId() {
-        if (associateId == null || associateId.isEmpty())
-            return Optional.empty();
-
-        return Optional.of(associateId);
+    public String getAssociateId() {
+        return associateId.isEmpty() ? "" : associateId.get();
     }
 
     public void setAssociateId(String associateId) {
         if (associateId.isEmpty()) {
-            this.associateId = null;
-            return;
+            this.associateId = Optional.empty();
+        } else {
+            this.associateId = Optional.of(associateId);
         }
-
-        this.associateId = associateId;
     }
 
     public byte[] getIdKeyPublicKey() {
-        return Optional.ofNullable(idKeyPublicKey).isEmpty() ? new byte[]{} : idKeyPublicKey;
+        return idKeyPublicKey.isEmpty() ? new byte[]{} : idKeyPublicKey.get();
     }
 
     public void setIdKeyPublicKey(byte[] idKeyPublicKey) {
         if (idKeyPublicKey.length == 0) {
-            this.idKeyPublicKey = null;
-            return;
+            this.idKeyPublicKey = Optional.empty();
+        } else {
+            this.idKeyPublicKey = Optional.of(idKeyPublicKey);
         }
-
-        this.idKeyPublicKey = idKeyPublicKey;
     }
 }

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -18,8 +17,7 @@ public class LockedDatabaseTest {
     @DisplayName("Testing connection over socket to KeePassXC")
     public void shouldHaveNoErrors() {
         assertTrue(kpa.connect());
-        assertFalse(kpa.databaseIsUnlocked());
-        assertTrue(kpa.getDatabasehash().isEmpty() || kpa.getDatabasehash().get().isEmpty());
+        assertTrue(kpa.isDatabaseLocked());
         assertTrue(kpa.shutdown());
     }
 }

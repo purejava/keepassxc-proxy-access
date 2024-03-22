@@ -27,7 +27,7 @@ public abstract class Connection implements AutoCloseable {
     private final PropertyChangeSupport support;
 
     private TweetNaclFast.Box box;
-    private Credentials credentials;
+    private Optional<Credentials> credentials;
     private final String clientID;
     private static final int nonceLength = 24;
     private byte[] nonce;
@@ -87,6 +87,7 @@ public abstract class Connection implements AutoCloseable {
         new Random().nextBytes(array);
         clientID = b64encode(array);
         nonce = TweetNaclFast.randombytes(nonceLength);
+        credentials = Optional.empty();
         support = new PropertyChangeSupport(this);
         scheduler = Executors.newSingleThreadScheduledExecutor();
     }
@@ -115,18 +116,18 @@ public abstract class Connection implements AutoCloseable {
                     if (!isSignal(response)) LOG.trace("Response added to queue: {}", response);
                     queue.offer(response);
                     errorCount = 0;
-                    continue;
-                }
-                errorCount++;
-                if (errorCount > MAX_ERROR_COUNT) {
-                    LOG.info("Too much errors - stopping MessagePublisher");
-                    doStop();
-                    try {
-                        terminateConnection();
-                    } catch (IOException e) {
-                        LOG.error(e.toString(), e.getCause());
+                } else {
+                    errorCount++;
+                    if (errorCount > MAX_ERROR_COUNT) {
+                        LOG.info("Too much errors - stopping MessagePublisher");
+                        doStop();
+                        try {
+                            terminateConnection();
+                        } catch (IOException e) {
+                            LOG.error(e.toString(), e.getCause());
+                        }
+                        reconnect();
                     }
-                    reconnect();
                 }
             }
             LOG.debug("MessagePublisher stopped");
@@ -269,13 +270,8 @@ public abstract class Connection implements AutoCloseable {
             throw new IllegalStateException(NOT_CONNECTED);
         }
 
-        var publicKey = Optional.ofNullable(credentials).orElseThrow(
-            () -> new IllegalStateException(KEYEXCHANGE_MISSING)
-        ).getServerPublicKey();
-
-        var keyPair = Optional.ofNullable(credentials).orElseThrow(
-            () -> new IllegalStateException(KEYEXCHANGE_MISSING)
-        ).getOwnKeypair();
+        var publicKey = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getServerPublicKey();
+        var keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
 
         if (msg.containsKey("triggerUnlock") && msg.get("triggerUnlock").equals("true")) {
             msg.remove("triggerUnlock");
@@ -390,11 +386,11 @@ public abstract class Connection implements AutoCloseable {
         var publicKey = b64decode(response.getString("publicKey").getBytes());
         box = new TweetNaclFast.Box(publicKey, keyPair.getSecretKey());
 
-        if (Optional.ofNullable(credentials).isEmpty()) {
-            setCredentials(new Credentials());
+        if (credentials.isEmpty()) {
+            setCredentials(Optional.of(new Credentials()));
         }
-        Optional.ofNullable(credentials).orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setOwnKeypair(keyPair);
-        Optional.ofNullable(credentials).orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setServerPublicKey(publicKey);
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setOwnKeypair(keyPair);
+        credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setServerPublicKey(publicKey);
         support.firePropertyChange("credentialsCreated", null, credentials);
 
     }
@@ -408,8 +404,7 @@ public abstract class Connection implements AutoCloseable {
      */
     public void associate() throws IOException, KeepassProxyAccessException {
         var idKeyPair = TweetNaclFast.Box.keyPair();
-        var keyPair = Optional.ofNullable(credentials).orElseThrow(
-            () -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
+        var keyPair = credentials.orElseThrow(() -> new IllegalStateException(KEYEXCHANGE_MISSING)).getOwnKeypair();
 
         // Send associate request
         var nonce = sendEncryptedMessage(Map.of(
@@ -432,12 +427,8 @@ public abstract class Connection implements AutoCloseable {
                 LOG.error(e.toString(), e.getCause());
             }
             assert response != null;
-            Optional.ofNullable(credentials).orElseThrow(
-                () -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
-
-            Optional.ofNullable(credentials).orElseThrow(
-                () -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
-
+            credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setAssociateId(response.getString("id"));
+            credentials.orElseThrow(() -> new IllegalStateException(MISSING_CLASS)).setIdKeyPublicKey(idKeyPair.getPublicKey());
             support.firePropertyChange("associated", null, credentials);
         };
         scheduler.schedule(lookupResponse, RESPONSE_DELAY_MS, TimeUnit.MILLISECONDS);
@@ -451,16 +442,12 @@ public abstract class Connection implements AutoCloseable {
      * @throws IOException                 Retrieving the hash failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to get the hash.
      */
-    public Optional<String> getDatabasehash() throws IOException, KeepassProxyAccessException {
+    public String getDatabasehash() throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request
         var nonce = sendEncryptedMessage(Map.of("action", Message.GET_DATABASE_HASH.action));
         var response = getEncryptedResponseAndDecrypt(Message.GET_DATABASE_HASH.action, nonce);
 
-        if (response.has("hash") && !response.getString("hash").isBlank()) {
-            return Optional.of(response.getString("hash"));
-        }
-
-        return Optional.empty();
+        return response.getString("hash");
     }
 
     /**
@@ -468,11 +455,11 @@ public abstract class Connection implements AutoCloseable {
      * Sent together with a request to unlock the KeePassXC database.
      *
      * @param triggerUnlock When true, the KeePassXC application is brought to the front and unlock is requested from the user.
-     * @return The database hash of the current active KeePassXC database.
+     * @return The database hash of the current active KeePassXC database. Empty if the database is locked.
      * @throws IOException                 Retrieving the hash failed due to technical reasons.
      * @throws KeepassProxyAccessException It was impossible to get the hash.
      */
-    public Optional<String> getDatabasehash(boolean triggerUnlock) throws IOException, KeepassProxyAccessException {
+    public String getDatabasehash(boolean triggerUnlock) throws IOException, KeepassProxyAccessException {
         // Send get-databasehash request with triggerUnlock, if needed
         var map = new HashMap<String, Object>(); // Map.of can't be used here, because we need a mutable object
         map.put("action", Message.GET_DATABASE_HASH.action);
@@ -480,7 +467,7 @@ public abstract class Connection implements AutoCloseable {
         var nonce = sendEncryptedMessage(map);
         var response = getEncryptedResponseAndDecrypt(Message.GET_DATABASE_HASH.action, nonce);
 
-        return Optional.ofNullable(response.getString("hash"));
+        return response.getString("hash");
     }
 
     /**
@@ -845,15 +832,15 @@ public abstract class Connection implements AutoCloseable {
     }
 
     // Getters and Setters
-    public Optional<String> getIdKeyPairPublicKey() {
-        return Optional.ofNullable(credentials).map(value -> b64encode(value.getIdKeyPublicKey()));
+    public String getIdKeyPairPublicKey() {
+        return credentials.map(value -> b64encode(value.getIdKeyPublicKey())).orElse("");
     }
 
-    public Optional<String> getAssociateId() {
-        return Optional.ofNullable(this.credentials).flatMap(Credentials::getAssociateId);
+    public String getAssociateId() {
+        return credentials.map(Credentials::getAssociateId).orElse("");
     }
 
-    public void setCredentials(Credentials credentials) {
+    public void setCredentials(Optional<Credentials> credentials) {
         this.credentials = credentials;
     }
 
