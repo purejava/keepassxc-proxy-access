@@ -25,9 +25,9 @@ public class UnlockedDatabaseTest {
     @Order(3)
     @DisplayName("Testing KeePassXC proxy functionality")
     public void shouldHaveNoErrors() throws InterruptedException {
-        assertFalse(kpa.isDatabaseLocked());
         LOG.info("Please enter a name for the connection in the pop-up within 10 seconds");
         assertTrue(kpa.connect());
+        assertFalse(kpa.isDatabaseLocked());
         // TODO:
         //  Revert after Qt bug is fixed
         //  This is false due to the workaround, although association succeeds
