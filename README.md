@@ -35,6 +35,16 @@ kpa.associate();
 You'll get an AssociateID and the public key of an IDKeypair created during the initial connection.
 Both pieces of data combined are needed for further connections. As both are public data, there is no need to store them securely.
 
+next steps:
+```java
+    var id=kpa.getAssociateId();
+    var keyPair = kpa.getIdKeyPairPublicKey();
+
+    var idKeyMap = List.of(Map.of("id", id, "key", keyPair)); // java 21
+    var logins = kpa.getLogins("https://login.url.com/", "", true, idKeyMap);
+    // System.out.println(logins) // nested map with credentials
+```
+
 # keepassxc-protocol
 Communication with KeePassXC happens via the KeePassXC protocol. Currently, the following functionality is implemented:
 *   `change-public-keys`: Request for passing public keys from client to server and back.
