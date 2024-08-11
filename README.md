@@ -35,9 +35,9 @@ kpa.associate();
 You'll get an AssociateID and the public key of an IDKeypair created during the initial connection.
 Both pieces of data combined are needed for further connections. As both are public data, there is no need to store them securely.
 
-next steps:
+Next steps:
 ```java
-    var id=kpa.getAssociateId();
+    var id = kpa.getAssociateId();
     var keyPair = kpa.getIdKeyPairPublicKey();
 
     var idKeyMap = List.of(Map.of("id", id, "key", keyPair)); // java 21
