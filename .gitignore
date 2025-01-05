@@ -11,9 +11,12 @@
 .project
 .classpath
 
-# Maven #
-target/
-pom.xml.versionsBackup
+# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 
 # IntelliJ Settings Files (https://intellij-support.jetbrains.com/hc/en-us/articles/206544839-How-to-manage-projects-under-Version-Control-Systems) #
 .idea/**/workspace.xml

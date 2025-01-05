@@ -1,4 +1,5 @@
 name: Publish to Maven Central
+
 on:
   workflow_dispatch:
     inputs:
@@ -6,24 +7,47 @@ on:
         description: 'Tag'
         required: true
         default: '0.0.0'
+      sonatypeUsername:
+        description: 'Sonatype username'
+        type: string
+        required: true
+      sonatypePassword:
+        description: 'Sonatype password'
+        type: string
+        required: true
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Maven Central Repository
+
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
-      - name: Publish package
-        run: mvn deploy -B -DskipTests -Psign,deploy-central --no-transfer-progress
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup GPG key information
+        run: |
+          mkdir -p ~/.gradle ~/.gnupg
+          echo "signing.gnupg.homeDir=/home/runner/.gnupg" >> ~/.gradle/gradle.properties
+          echo "signing.gnupg.executable=gpg" >> ~/.gradle/gradle.properties
+          echo "signing.gnupg.keyName=ABC48776" >> ~/.gradle/gradle.properties
+          echo "signing.gnupg.passphrase=${GPG_SIGNING_KEY_PW}" >> ~/.gradle/gradle.properties
+          echo "no-tty" >> ~/.gnupg/gpg.conf >> ~/.gradle/gradle.properties
         env:
-          MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_SIGNING_KEY_PW: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Build package
+        run: ./gradlew clean build
+
+      - name: Publish package
+        run: ./gradlew publishToSonatype closeSonatypeStagingRepository
+        env:
+          SONATYPE_USERNAME: ${{ inputs.sonatypeUsername }}
+          SONATYPE_PASSWORD: ${{ inputs.sonatypePassword }}

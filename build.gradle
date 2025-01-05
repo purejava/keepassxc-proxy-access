@@ -1,0 +1,107 @@
+plugins {
+    id 'java-library'
+    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
+    id 'maven-publish'
+    id 'signing'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api libs.org.purejava.tweetnacl.java
+    api libs.org.json.json
+    api libs.org.apache.commons.commons.lang3
+    api libs.org.slf4j.slf4j.api
+    testImplementation libs.org.junit.jupiter.junit.jupiter.api
+    testImplementation libs.org.junit.jupiter.junit.jupiter.engine
+    testImplementation libs.org.junit.jupiter.junit.jupiter
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation libs.org.slf4j.slf4j.simple
+}
+
+group = 'org.purejava'
+version = '1.2.8'
+description = 'A Java library to access KeePassXC via its build-in proxy.'
+java.sourceCompatibility = JavaVersion.VERSION_17
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+test {
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching "KeepassProxyAccessTest"
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            pom {
+                name = 'keepassxc-proxy-access'
+                description = 'A Java library to access KeePassXC via its build-in proxy.'
+                url = 'https://github.com/purejava/keepassxc-proxy-access'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'purejava'
+                        name = 'Ralph Plawetzki'
+                        email = 'ralph@purejava.org'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/purejava/keepassxc-proxy-access.git'
+                    developerConnection = 'scm:git:ssh://github.com/purejava/keepassxc-proxy-access.git'
+                    url = 'https://github.com/purejava/keepassxc-proxy-access/tree/main'
+                }
+                issueManagement {
+                    system = 'GitHub Issues'
+                    url = 'https://github.com/purejava/keepassxc-proxy-access/issues'
+                }
+            }
+        }
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {  //only for users registered in Sonatype after 24 Feb 2021
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username = sonatypeUsername
+            password = sonatypePassword
+        }
+    }
+}
+
+if (!version.toString().endsWith("-SNAPSHOT")) {
+    signing {
+        useGpgCmd()
+        sign configurations.runtimeElements
+        sign publishing.publications.mavenJava
+    }
+}
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+}
