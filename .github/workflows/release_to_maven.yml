@@ -42,6 +42,11 @@ jobs:
         env:
           GPG_SIGNING_KEY_PW: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Verify Sonatype credentials
+        run: |
+          echo "SONATYPE_USERNAME: ${{ secrets.NEXUS_USERNAME }}"
+          echo "SONATYPE_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}"
+
       - name: Build package
         run: ./gradlew clean build
         env:
