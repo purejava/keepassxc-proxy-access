@@ -7,14 +7,6 @@ on:
         description: 'Tag'
         required: true
         default: '0.0.0'
-      sonatypeUsername:
-        description: 'Sonatype username'
-        type: string
-        required: true
-      sonatypePassword:
-        description: 'Sonatype password'
-        type: string
-        required: true
 
 jobs:
   publish:
@@ -32,6 +24,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Import GPG key
+        run: |
+          echo "$GPG_SIGNING_KEY_PW" | gpg --batch --import --yes --passphrase-fd 0 <(echo -n "$GPG_SIGNING_KEY_B64" | base64 --decode)
+        env:
+          GPG_SIGNING_KEY_B64: ${{ secrets.$GPG_PRIVATE_KEY_B64 }}
+          GPG_SIGNING_KEY_PW: ${{ secrets.GPG_PASSPHRASE }}
+
       - name: Setup GPG key information
         run: |
           mkdir -p ~/.gradle ~/.gnupg
@@ -48,9 +47,10 @@ jobs:
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_SIGNING_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          JAVA_HOME: /usr/lib/jvm/java-17-temurin
 
       - name: Publish package
         run: ./gradlew publishToSonatype closeSonatypeStagingRepository
         env:
-          SONATYPE_USERNAME: ${{ inputs.sonatypeUsername }}
-          SONATYPE_PASSWORD: ${{ inputs.sonatypePassword }}
+          SONATYPE_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
