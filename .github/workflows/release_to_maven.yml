@@ -63,7 +63,5 @@ jobs:
       - name: Publish package
         run: ./gradlew publishToSonatype closeSonatypeStagingRepository
         env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_SIGNING_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           SONATYPE_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
