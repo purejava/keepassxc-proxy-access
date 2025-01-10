@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "$GPG_SIGNING_KEY_PW" | gpg --batch --import --yes --passphrase-fd 0 <(echo -n "$GPG_SIGNING_KEY_B64" | base64 --decode)
         env:
-          GPG_SIGNING_KEY_B64: ${{ secrets.$GPG_PRIVATE_KEY_B64 }}
+          GPG_SIGNING_KEY_B64: ${{ secrets.GPG_PRIVATE_KEY_B64 }}
           GPG_SIGNING_KEY_PW: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Setup GPG key information
