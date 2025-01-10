@@ -47,7 +47,6 @@ jobs:
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_SIGNING_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          JAVA_HOME: /usr/lib/jvm/java-17-temurin
 
       - name: Publish package
         run: ./gradlew publishToSonatype closeSonatypeStagingRepository
