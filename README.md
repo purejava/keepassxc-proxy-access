@@ -11,6 +11,13 @@ A Java library to access KeePassXC via its build-in proxy. Requires KeePassXC 2.
 
 # Dependency
 Add `keepassxc-proxy-access` as a dependency to your project.
+
+## Gradle
+```gradle
+implementation group: 'org.purejava', name: 'keepassxc-proxy-access', version: '1.2.7'
+```
+## Maven
+
 ```maven
 <dependency>
     <groupId>org.purejava</groupId>
