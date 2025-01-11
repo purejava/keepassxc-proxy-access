@@ -38,21 +38,8 @@ jobs:
           echo "signing.gnupg.executable=gpg" >> ~/.gradle/gradle.properties
           echo "signing.gnupg.keyName=ABC48776" >> ~/.gradle/gradle.properties
           echo "signing.gnupg.passphrase=${GPG_SIGNING_KEY_PW}" >> ~/.gradle/gradle.properties
-          echo "no-tty" >> ~/.gnupg/gpg.conf >> ~/.gradle/gradle.properties
         env:
           GPG_SIGNING_KEY_PW: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Debug credentials
-        run: |
-          echo "SONATYPE_USERNAME length: ${#SONATYPE_USERNAME}"
-          echo "SONATYPE_PASSWORD length: ${#SONATYPE_PASSWORD}"
-          if [[ -z "$SONATYPE_USERNAME" || -z "$SONATYPE_PASSWORD" ]]; then
-            echo "Sonatype credentials are missing."
-            exit 1
-          fi
-        env:
-          SONATYPE_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
 
       - name: Build package
         run: ./gradlew clean build
