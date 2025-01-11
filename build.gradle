@@ -26,6 +26,9 @@ version = '1.2.8'
 description = 'A Java library to access KeePassXC via its build-in proxy.'
 java.sourceCompatibility = JavaVersion.VERSION_17
 
+def sonatypeUsername = localEnv.getProperty("SONATYPE_USERNAME") ?: System.getenv("SONATYPE_USERNAME")
+def sonatypePassword = localEnv.getProperty("SONATYPE_PASSWORD") ?: System.getenv("SONATYPE_PASSWORD")
+
 java {
     withSourcesJar()
     withJavadocJar()
