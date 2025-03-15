@@ -9,7 +9,7 @@ org-junit-jupiter-junit-jupiter-api = "5.12.0"
 org-junit-jupiter-junit-jupiter-engine = "5.12.0"
 org-purejava-tweetnacl-java = "1.1.2"
 org-slf4j-slf4j-api = "2.0.17"
-org-slf4j-slf4j-simple = "2.0.16"
+org-slf4j-slf4j-simple = "2.0.17"
 
 [libraries]
 org-apache-commons-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "org-apache-commons-commons-lang3" }
