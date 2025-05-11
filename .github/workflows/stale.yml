@@ -14,8 +14,8 @@ jobs:
     steps:
       - uses: actions/stale@v9
         with:
-          days-before-stale: 180
-          days-before-close: 30
+          days-before-stale: 30
+          days-before-close: 7
           exempt-issue-labels: 'security-issue,feature-request,upstream-bug,more-information-needed,blocked,confirmed'
           exempt-all-milestones: true
           stale-issue-label: 'state:stale'
