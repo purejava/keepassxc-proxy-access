@@ -1,6 +1,6 @@
 plugins {
     id("java-library")
-    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
+    id("eu.kakde.gradle.sonatype-maven-central-publisher") version "1.0.6"
     id("maven-publish")
     id("signing")
 }
@@ -75,13 +75,42 @@ publishing {
     }
 }
 
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(sonatypeUsername)
-            password.set(sonatypePassword)
+sonatypeCentralPublishExtension {
+    groupId.set(project.group.toString())
+    artifactId.set("keepassxc-proxy-access")
+    version.set(project.version.toString())
+    componentType.set("java")
+    publishingType.set("USER_MANAGED")
+
+    username.set(sonatypeUsername)
+    password.set(sonatypePassword)
+
+    // Configure POM metadata
+    pom {
+        name.set("keepassxc-proxy-access")
+        description.set("A Java library to access KeePassXC via its build-in proxy.")
+        url.set("https://github.com/purejava/keepassxc-proxy-access")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
+            }
+        }
+        developers {
+            developer {
+                id.set("purejava")
+                name.set("Ralph Plawetzki")
+                email.set("ralph@purejava.org")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/purejava/keepassxc-proxy-access.git")
+            developerConnection.set("scm:git:ssh://github.com/purejava/keepassxc-proxy-access.git")
+            url.set("https://github.com/purejava/keepassxc-proxy-access/tree/main")
+        }
+        issueManagement {
+            system.set("GitHub Issues")
+            url.set("https://github.com/purejava/keepassxc-proxy-access/issues")
         }
     }
 }
