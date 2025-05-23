@@ -22,7 +22,7 @@ implementation group: 'org.purejava', name: 'keepassxc-proxy-access', version: '
 <dependency>
     <groupId>org.purejava</groupId>
     <artifactId>keepassxc-proxy-access</artifactId>
-    <version>1.2.7</version>
+    <version>1.2.8</version>
 </dependency>
 ```
 
