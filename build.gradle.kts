@@ -81,8 +81,8 @@ publishing {
 centralPortal {
     publishingType.set(PublishingType.USER_MANAGED)
 
-    centralPortal.username.set(sonatypeUsername)
-    centralPortal.password.set(sonatypePassword)
+    username.set(sonatypeUsername)
+    password.set(sonatypePassword)
 
     // Configure POM metadata
     pom {
