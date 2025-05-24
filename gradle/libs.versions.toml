@@ -3,7 +3,7 @@
 
 [versions]
 org-apache-commons-commons-lang3 = "3.17.0"
-org-json-json = "20250107"
+org-json-json = "20250517"
 org-junit-jupiter-junit-jupiter = "5.12.2"
 org-junit-jupiter-junit-jupiter-api = "5.12.2"
 org-junit-jupiter-junit-jupiter-engine = "5.12.2"
