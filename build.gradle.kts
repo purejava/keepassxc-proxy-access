@@ -1,6 +1,8 @@
+import net.thebugmc.gradle.sonatypepublisher.PublishingType
+
 plugins {
     id("java-library")
-    id("eu.kakde.gradle.sonatype-maven-central-publisher") version "1.0.6"
+    id("net.thebugmc.gradle.sonatype-central-portal-publisher") version "1.2.4"
     id("maven-publish")
     id("signing")
 }
@@ -76,15 +78,11 @@ publishing {
     }
 }
 
-sonatypeCentralPublishExtension {
-    groupId.set(project.group.toString())
-    artifactId.set("keepassxc-proxy-access")
-    version.set(project.version.toString())
-    componentType.set("java")
-    publishingType.set("USER_MANAGED")
+centralPortal {
+    publishingType.set(PublishingType.USER_MANAGED)
 
-    username.set(sonatypeUsername)
-    password.set(sonatypePassword)
+    centralPortal.username.set(sonatypeUsername)
+    centralPortal.password.set(sonatypePassword)
 
     // Configure POM metadata
     pom {
