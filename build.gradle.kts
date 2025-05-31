@@ -1,4 +1,4 @@
-import net.thebugmc.gradle.sonatypepublisher.PublishingType
+import net.thebugmc.gradle.sonatypepublisher.PublishingType.*
 
 plugins {
     id("java-library")
@@ -79,7 +79,7 @@ publishing {
 }
 
 centralPortal {
-    publishingType.set(PublishingType.USER_MANAGED)
+    publishingType.set(USER_MANAGED)
 
     username.set(sonatypeUsername)
     password.set(sonatypePassword)
