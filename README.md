@@ -73,7 +73,7 @@ Communication with KeePassXC happens via the KeePassXC protocol. Currently, the 
 *   `database-unlocked`: A signal from KeePassXC, the current active database is unlocked.
 
 # Donation
-If you like this project, you can give me a cup of coffee :)
+If you like this project, why not buy me a cup of coffee?
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=XVX9ZM7WE4ANL)
 
