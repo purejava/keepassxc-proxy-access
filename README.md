@@ -14,7 +14,7 @@ Add `keepassxc-proxy-access` as a dependency to your project.
 
 ## Gradle
 ```gradle
-implementation group: 'org.purejava', name: 'keepassxc-proxy-access', version: '1.2.7'
+implementation group: 'org.purejava', name: 'keepassxc-proxy-access', version: '1.2.9'
 ```
 ## Maven
 
@@ -22,7 +22,7 @@ implementation group: 'org.purejava', name: 'keepassxc-proxy-access', version: '
 <dependency>
     <groupId>org.purejava</groupId>
     <artifactId>keepassxc-proxy-access</artifactId>
-    <version>1.2.8</version>
+    <version>1.2.9</version>
 </dependency>
 ```
 
