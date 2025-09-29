@@ -28,7 +28,7 @@ version = "1.2.9-SNAPSHOT"
 description = "A Java library to access KeePassXC via its build-in proxy."
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
     withSourcesJar()
     withJavadocJar()
 }
