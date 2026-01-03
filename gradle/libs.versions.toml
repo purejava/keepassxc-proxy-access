@@ -7,6 +7,7 @@ org-json-json = "20251224"
 org-junit-jupiter-junit-jupiter = "6.0.1"
 org-junit-jupiter-junit-jupiter-api = "6.0.1"
 org-junit-jupiter-junit-jupiter-engine = "6.0.1"
+org-junit-platform-junit-platform-launcher = "6.0.1"
 org-purejava-tweetnacl-java = "1.1.2"
 org-slf4j-slf4j-api = "2.0.17"
 org-slf4j-slf4j-simple = "2.0.17"
@@ -17,7 +18,7 @@ org-json-json = { module = "org.json:json", version.ref = "org-json-json" }
 org-junit-jupiter-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "org-junit-jupiter-junit-jupiter" }
 org-junit-jupiter-junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "org-junit-jupiter-junit-jupiter-api" }
 org-junit-jupiter-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "org-junit-jupiter-junit-jupiter-engine" }
-org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "org-junit-platform-junit-platform-launcher" }
 org-purejava-tweetnacl-java = { module = "org.purejava:tweetnacl-java", version.ref = "org-purejava-tweetnacl-java" }
 org-slf4j-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "org-slf4j-slf4j-api" }
 org-slf4j-slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "org-slf4j-slf4j-simple" }
