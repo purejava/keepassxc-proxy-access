@@ -78,7 +78,7 @@ public class UnlockedDatabaseTest {
             "\"user\":{\"displayName\":\"ralph@purejava.org\",\"id\":\"Y21Gc2NHaEFjSFZ5WldwaGRtRXViM0pu\",\"name\":\"ralph@purejava.org\"}}";
         JSONObject p = new JSONObject(publicKey);
         assertEquals(
-            "eyJjaGFsbGVuZ2UiOiJoSnk1M2t3UGMzT2RxYmtqWFEyNjhWQWlIR1ctczBxSF9NV1lZSW1famZtQ2NLN2pCdVYxalRaN21kQ2hYLTl1eTBkQlIzTjlRbDdRcExxWXJfMGxOZyIsImNyb3NzT3JpZ2luIjpmYWxzZSwib3JpZ2luIjoiaHR0cHM6Ly93ZWJhdXRobi5pbyIsInR5cGUiOiJ3ZWJhdXRobi5jcmVhdGUifQ",
+            "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiaEp5NTNrd1BjM09kcWJralhRMjY4VkFpSEdXLXMwcUhfTVdZWUltX2pmbUNjSzdqQnVWMWpUWjdtZENoWC05dXkwZEJSM045UWw3UXBMcVlyXzBsTmciLCJvcmlnaW4iOiJodHRwczovL3dlYmF1dGhuLmlvIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
             kpa.passkeysRegister(p, "https://webauthn.io", l).getJSONObject("response").getString("clientDataJSON"));
         LOG.info("Please allow authenticate with the stored Passkey");
         publicKey = "{\"allowCredentials\":[]," +
