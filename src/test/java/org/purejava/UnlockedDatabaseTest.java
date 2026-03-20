@@ -60,7 +60,7 @@ public class UnlockedDatabaseTest {
         assertTrue(kpa.databaseGroupsToMap(kpa.getDatabaseGroups()).toString().contains("KeePassXC-Browser Passwords"));
         assertFalse(kpa.generatePassword().isEmpty());
         LOG.info("Please allow to create new group");
-        assertEquals(kpa.createNewGroup("Testgroup").get("name"), "Testgroup");
+        assertEquals("Testgroup", kpa.createNewGroup("Testgroup").get("name"));
         assertTrue(null != kpa.getTotp("2aafee1a89fd435c8bad7df12bbaaa3e") && !kpa.getTotp("2aafee1a89fd435c8bad7df12bbaaa3e").isEmpty());
         LOG.info("Requesting autotype");
         assertTrue(kpa.requestAutotype("https://github.com"));
@@ -88,7 +88,7 @@ public class UnlockedDatabaseTest {
             "\"userVerification\":\"preferred\"}";
         p = new JSONObject(publicKey);
         assertEquals(
-            "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvAFAAAAAA",
+            "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvAdAAAAAA",
             kpa.passkeysGet(p, "https://webauthn.io", l).getJSONObject("response").getString("authenticatorData")
         );
         LOG.info("Please deny to save changes");
