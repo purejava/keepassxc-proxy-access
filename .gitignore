@@ -25,3 +25,8 @@ build/
 .idea/**/libraries/
 *.iml
 
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
