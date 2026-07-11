@@ -25,7 +25,7 @@ dependencies {
 }
 
 group = "org.purejava"
-version = "1.3.2-SNAPSHOT"
+version = "1.3.2"
 description = "A Java library to access KeePassXC via its build-in proxy."
 
 java {
