@@ -9,6 +9,7 @@ plugins {
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
@@ -116,12 +117,18 @@ centralPortal {
     }
 }
 
-if (!version.toString().endsWith("-SNAPSHOT")) {
-    signing {
-        useGpgCmd()
-        sign(configurations.runtimeElements.get())
-        sign(publishing.publications["mavenJava"])
-    }
+tasks.named("publishCentralPortalPublicationToMavenLocal") {
+    dependsOn("signMavenJavaPublication")
+}
+
+tasks.named("publishMavenJavaPublicationToMavenLocal") {
+    dependsOn("signCentralPortalPublication")
+}
+
+signing {
+    useGpgCmd()
+    sign(configurations.runtimeElements.get())
+    sign(publishing.publications["mavenJava"])
 }
 
 tasks.withType<JavaCompile> {
