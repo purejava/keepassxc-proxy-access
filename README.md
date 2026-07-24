@@ -5,6 +5,9 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f8c426863d4c46578ef2b7ae8c32e99f)](https://app.codacy.com/gh/purejava/keepassxc-proxy-access?utm_source=github.com&utm_medium=referral&utm_content=purejava/keepassxc-proxy-access&utm_campaign=Badge_Grade)
 [![Maven Central](https://img.shields.io/maven-central/v/org.purejava/keepassxc-proxy-access.svg?label=Maven%20Central)](https://central.sonatype.com/search?q=keepassxc-proxy-access&smo=true&namespace=org.purejava)
 [![License](https://img.shields.io/github/license/purejava/keepassxc-proxy-access.svg)](https://github.com/purejava/keepassxc-proxy-access/blob/master/LICENSE)
+<a href="#supported-platforms"><img alt="Windows" src="https://img.shields.io/badge/Windows-supported-blue.svg" /></a>
+<a href="#supported-platforms"><img alt="macOS" src="https://img.shields.io/badge/macOS-supported-blue.svg" /></a>
+<a href="#supported-platforms"><img alt="Linux" src="https://img.shields.io/badge/Linux-supported-blue.svg" /></a>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=XVX9ZM7WE4ANL)
 
 A Java library to access KeePassXC via its build-in proxy. Requires KeePassXC 2.6.0 or newer.
